@@ -527,7 +527,7 @@ def generate_embeddings(
     print("Finished loading model")
 
     for batch in data_loader:
-        for k,v in batch:
+        for k,v in batch.items():
             v.cuda()
         s,z = model_module.forward_embed(batch,recycling_steps=recycling_steps)
         print(s.shape,z.shape)
