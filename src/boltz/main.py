@@ -398,6 +398,25 @@ def predict(
         return_predictions=False,
     )
 
+class EmbeddingCallback(Callback):
+    """Callback to handle embedding generation."""
+    
+    def __init__(self):
+        super().__init__()
+        self.embeddings = []
+        
+    def on_predict_batch_start(
+        self, trainer, pl_module, batch, batch_idx, dataloader_idx=0
+    ):
+        # Disable the normal prediction step
+        trainer.predict_loop.running = False
+        
+        # Generate embeddings using forward_embed
+        s, z = pl_module.forward_embed(batch, recycling_steps=trainer.model.predict_args['recycling_steps'])
+        self.embeddings.append((s, z))
+        print(s.shape, z.shape)  # Keep the shape printing from original code
+
+
 @cli.command()
 @click.argument("data", type=click.Path(exists=True))
 @click.option(
@@ -447,6 +466,7 @@ def predict(
     is_flag=True,
     help="Whether to override existing found predictions. Default is False.",
 )
+
 def generate_embeddings(
     data: str,
     out_dir: str,
@@ -493,7 +513,7 @@ def generate_embeddings(
     data = check_inputs(data, out_dir, override)
     processed = process_inputs(data, out_dir, ccd)
 
-    print("Finished procesing inputs.")
+    print("Finished processing inputs.")
 
     # Create data module
     data_module = BoltzInferenceDataModule(
@@ -504,10 +524,6 @@ def generate_embeddings(
     )
 
     print("Finished loading data module")
-
-    data_loader = data_module.predict_dataloader()
-
-    print("Finished acquiring data loader")
 
     # Load model
     predict_args = {
@@ -522,19 +538,28 @@ def generate_embeddings(
         diffusion_process_args=asdict(BoltzDiffusionParams()),
     )
     model_module.eval()
-    model_module.cuda()
+
+    # Create embedding callback
+    embedding_callback = EmbeddingCallback()
+    
+    # Set up trainer with the embedding callback
+    trainer = Trainer(
+        default_root_dir=out_dir,
+        accelerator=accelerator,
+        devices=devices,
+        callbacks=[embedding_callback],
+        precision=32,
+    )
 
     print("Finished loading model")
 
-    for batch in data_loader:
-        print(batch.keys())
-        for k,v in batch.items():
-            if isinstance(v,torch.Tensor):
-                v.cuda()
-        s,z = model_module.forward_embed(batch,recycling_steps=recycling_steps)
-        print(s.shape,z.shape)
+    # Run prediction
+    trainer.predict(model_module, datamodule=data_module)
 
     print("Finished")
+    
+    # Embeddings are now available in embedding_callback.embeddings
+    return embedding_callback.embeddings
 
 
 
