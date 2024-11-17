@@ -427,16 +427,10 @@ def predict(
     default=None,
 )
 @click.option(
-    "--devices",
-    type=int,
-    help="The number of devices to use for prediction. Default is 1.",
-    default=1,
-)
-@click.option(
     "--accelerator",
-    type=click.Choice(["gpu", "cpu", "tpu"]),
+    type=click.Choice(["cuda:0", "cpu", "tpu"]),
     help="The accelerator to use for prediction. Default is gpu.",
-    default="gpu",
+    default="cuda:0",
 )
 @click.option(
     "--recycling_steps",
@@ -466,12 +460,11 @@ def generate_embeddings(
     out_hdf5: str,
     cache: str = "~/.boltz",
     checkpoint: Optional[str] = None,
-    devices: int = 1,
-    accelerator: str = "gpu",
+    accelerator: str = "cuda:0",
     recycling_steps: int = 3,
     num_workers: int = 2,
     override: bool = False,
-    mean: bool = False
+    mean: bool = False,
 ) -> None:
     """Run predictions with Boltz-1."""
     # If cpu, write a friendly warning
@@ -508,8 +501,6 @@ def generate_embeddings(
     data = check_inputs(data, out_dir, override)
     processed = process_inputs(data, out_dir, ccd)
 
-    print("Finished procesing inputs.")
-
     # Create data module
     data_module = BoltzInferenceDataModule(
         manifest=processed.manifest,
@@ -518,11 +509,7 @@ def generate_embeddings(
         num_workers=num_workers,
     )
 
-    print("Finished loading data module")
-
     data_loader = data_module.predict_dataloader()
-
-    print("Finished acquiring data loader")
 
     # Load model
     predict_args = {
@@ -537,39 +524,36 @@ def generate_embeddings(
         diffusion_process_args=asdict(BoltzDiffusionParams()),
     )
     model_module.eval()
-    model_module.cuda()
+    model_module.to(accelerator)
 
-    print("Finished loading model")
-
-
-    def move_batch_to_device(batch, device):
+    def move_batch_to_device(batch: dict[str, any], device: str) -> dict[str, any]:
         if isinstance(batch, dict):
             for key, value in batch.items():
                 if isinstance(value, torch.Tensor):
                     batch[key] = value.to(device)
                 elif isinstance(value, dict):
                     batch[key] = move_batch_to_device(value, device)
-                elif isinstance(value,list):
+                elif isinstance(value, list):
                     for i in value:
                         if torch.is_tensor(i):
-                            i.cuda()
+                            i.to(device)
         return batch
 
-    with h5py.File(out_hdf5, 'w') as h5f:
+    with h5py.File(out_hdf5, "w") as h5f:
         for batch in data_loader:
-            batch = move_batch_to_device(batch,"cuda:0")
-            sinlge_emb,pair_emb = model_module.forward_embed(batch,recycling_steps=recycling_steps)
+            batch = move_batch_to_device(batch, accelerator)
+            sinlge_emb, pair_emb = model_module.forward_embed(
+                batch, recycling_steps=recycling_steps
+            )
             if mean:
-                sinlge_emb = torch.mean(sinlge_emb,dim=-1)
-                pair_emb = torch.mean(pair_emb,dim=-1)
-            print(sinlge_emb.shape,pair_emb.shape)
-            print(len(batch['record']),batch['record'])
-            print(batch.keys())
-            h5f.create_dataset(f"{batch['record'][0].id}_data_single_emb", data = sinlge_emb.cpu())
-            h5f.create_dataset(f"{batch['record'][0].id}_data_pair_emb", data = pair_emb.cpu())
-
-    print("Finished")
-
+                sinlge_emb = torch.mean(sinlge_emb, dim=-1)
+                pair_emb = torch.mean(pair_emb, dim=-1)
+            h5f.create_dataset(
+                f"{batch['record'][0].id}_data_single_emb", data=sinlge_emb.cpu()
+            )
+            h5f.create_dataset(
+                f"{batch['record'][0].id}_data_pair_emb", data=pair_emb.cpu()
+            )
 
 
 if __name__ == "__main__":

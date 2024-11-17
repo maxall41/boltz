@@ -255,9 +255,9 @@ class Boltz1(LightningModule):
                 if name.split(".")[0] != "confidence_module":
                     param.requires_grad = False
 
-    def forward_embed(self,
-        feats: dict[str, Tensor],
-        recycling_steps: int = 0) -> (Tensor,Tensor):
+    def forward_embed(
+        self, feats: dict[str, Tensor], recycling_steps: int = 0
+    ) -> (Tensor, Tensor):
         # Compute input embeddings
         with torch.set_grad_enabled(
             self.training and self.structure_prediction_training
@@ -308,7 +308,7 @@ class Boltz1(LightningModule):
 
                     s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
 
-            return (s,z)
+            return (s, z)
 
     def forward(
         self,
