@@ -398,6 +398,131 @@ def predict(
         return_predictions=False,
     )
 
+@cli.command()
+@click.argument("data", type=click.Path(exists=True))
+@click.option(
+    "--out_dir",
+    type=click.Path(exists=False),
+    help="The path where to save the predictions.",
+    default="./",
+)
+@click.option(
+    "--cache",
+    type=click.Path(exists=False),
+    help="The directory where to download the data and model. Default is ~/.boltz.",
+    default="~/.boltz",
+)
+@click.option(
+    "--checkpoint",
+    type=click.Path(exists=True),
+    help="An optional checkpoint, will use the provided Boltz-1 model by default.",
+    default=None,
+)
+@click.option(
+    "--devices",
+    type=int,
+    help="The number of devices to use for prediction. Default is 1.",
+    default=1,
+)
+@click.option(
+    "--accelerator",
+    type=click.Choice(["gpu", "cpu", "tpu"]),
+    help="The accelerator to use for prediction. Default is gpu.",
+    default="gpu",
+)
+@click.option(
+    "--recycling_steps",
+    type=int,
+    help="The number of recycling steps to use for prediction. Default is 3.",
+    default=3,
+)
+@click.option(
+    "--num_workers",
+    type=int,
+    help="The number of dataloader workers to use for prediction. Default is 2.",
+    default=2,
+)
+@click.option(
+    "--override",
+    is_flag=True,
+    help="Whether to override existing found predictions. Default is False.",
+)
+def generate_embeddings(
+    data: str,
+    out_dir: str,
+    cache: str = "~/.boltz",
+    checkpoint: Optional[str] = None,
+    devices: int = 1,
+    accelerator: str = "gpu",
+    recycling_steps: int = 3,
+    num_workers: int = 2,
+    override: bool = False,
+) -> None:
+    """Run predictions with Boltz-1."""
+    # If cpu, write a friendly warning
+    if accelerator == "cpu":
+        msg = "Running on CPU, this will be slow. Consider using a GPU."
+        click.echo(msg)
+
+    # Set no grad
+    torch.set_grad_enabled(False)
+
+    # Set cache path
+    cache = Path(cache).expanduser()
+    cache.mkdir(parents=True, exist_ok=True)
+
+    # Create output directories
+    data = Path(data).expanduser()
+    out_dir = Path(out_dir).expanduser()
+    out_dir = out_dir / f"boltz_results_{data.stem}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download necessary data and model
+    download(cache)
+
+    # Load CCD
+    ccd_path = cache / "ccd.pkl"
+    with ccd_path.open("rb") as file:
+        ccd = pickle.load(file)  # noqa: S301
+
+    # Set checkpoint
+    if checkpoint is None:
+        checkpoint = cache / "boltz1.ckpt"
+
+    # Check if data is a directory
+    data = check_inputs(data, out_dir, override)
+    processed = process_inputs(data, out_dir, ccd)
+
+    # Create data module
+    data_module = BoltzInferenceDataModule(
+        manifest=processed.manifest,
+        target_dir=processed.targets_dir,
+        msa_dir=processed.msa_dir,
+        num_workers=num_workers,
+    )
+
+    data_loader = data_module.predict_dataloader()
+
+    # Load model
+    predict_args = {
+        "recycling_steps": recycling_steps,
+        "sampling_steps": -1,
+        "diffusion_samples": -1,
+    }
+    model_module: Boltz1 = Boltz1.load_from_checkpoint(
+        checkpoint,
+        strict=True,
+        predict_args=predict_args,
+        map_location="cpu",
+        diffusion_process_args=asdict(BoltzDiffusionParams()),
+    )
+    model_module.eval()
+
+    for batch in data_loader:
+        s,z = model_module.forward_embed(batch,recycling_steps=recycling_steps)
+        print(s.shape,z.shape)
+
+
 
 if __name__ == "__main__":
     cli()

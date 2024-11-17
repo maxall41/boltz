@@ -255,6 +255,61 @@ class Boltz1(LightningModule):
                 if name.split(".")[0] != "confidence_module":
                     param.requires_grad = False
 
+    def forward_embed(self,
+        feats: dict[str, Tensor],
+        recycling_steps: int = 0) -> (Tensor,Tensor):
+        # Compute input embeddings
+        with torch.set_grad_enabled(
+            self.training and self.structure_prediction_training
+        ):
+            s_inputs = self.input_embedder(feats)
+
+            # Initialize the sequence and pairwise embeddings
+            s_init = self.s_init(s_inputs)
+            z_init = (
+                self.z_init_1(s_inputs)[:, :, None]
+                + self.z_init_2(s_inputs)[:, None, :]
+            )
+            relative_position_encoding = self.rel_pos(feats)
+            z_init = z_init + relative_position_encoding
+            z_init = z_init + self.token_bonds(feats["token_bonds"].float())
+
+            # Perform rounds of the pairwise stack
+            s = torch.zeros_like(s_init)
+            z = torch.zeros_like(z_init)
+
+            # Compute pairwise mask
+            mask = feats["token_pad_mask"].float()
+            pair_mask = mask[:, :, None] * mask[:, None, :]
+
+            for i in range(recycling_steps + 1):
+                with torch.set_grad_enabled(self.training and (i == recycling_steps)):
+                    # Fixes an issue with unused parameters in autocast
+                    if (
+                        self.training
+                        and (i == recycling_steps)
+                        and torch.is_autocast_enabled()
+                    ):
+                        torch.clear_autocast_cache()
+
+                    # Apply recycling
+                    s = s_init + self.s_recycle(self.s_norm(s))
+                    z = z_init + self.z_recycle(self.z_norm(z))
+
+                    # Compute pairwise stack
+                    if not self.no_msa:
+                        z = z + self.msa_module(z, s_inputs, feats)
+
+                    # Revert to uncompiled version for validation
+                    if self.is_pairformer_compiled and not self.training:
+                        pairformer_module = self.pairformer_module._orig_mod  # noqa: SLF001
+                    else:
+                        pairformer_module = self.pairformer_module
+
+                    s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
+
+            return (s,z)
+
     def forward(
         self,
         feats: dict[str, Tensor],
