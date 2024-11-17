@@ -409,6 +409,12 @@ def predict(
     default="./",
 )
 @click.option(
+    "--out_hdf5",
+    type=click.Path(exists=False),
+    help="HDF5 file to save embeddings in",
+    default="out.hdf5",
+)
+@click.option(
     "--cache",
     type=click.Path(exists=False),
     help="The directory where to download the data and model. Default is ~/.boltz.",
