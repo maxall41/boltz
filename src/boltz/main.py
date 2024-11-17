@@ -3,6 +3,7 @@ import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal, Optional
+from pytorch_lightning.callbacks import Callback
 
 import click
 import torch
