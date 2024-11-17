@@ -527,14 +527,23 @@ def generate_embeddings(
 
     print("Finished loading model")
 
+
+    def move_batch_to_device(batch, device):
+        if isinstance(batch, dict):
+            for key, value in batch.items():
+                if isinstance(value, torch.Tensor):
+                    batch[key] = value.to(device)
+                elif isinstance(value, dict):
+                    batch[key] = move_batch_to_device(value, device)
+                elif isinstance(value,list):
+                    for i in value:
+                        if torch.is_tensor(i):
+                            i.cuda()
+        return batch
+
+
     for batch in data_loader:
-        for k,v in batch:
-            if torch.is_tensor(v):
-                v.cuda()
-            if isinstance(v,list):
-                for i in v:
-                    if torch.is_tensor(i):
-                        i.cuda()
+        batch = move_batch_to_device(batch,"cuda:0")
         s,z = model_module.forward_embed(batch,recycling_steps=recycling_steps)
         print(s.shape,z.shape)
 
