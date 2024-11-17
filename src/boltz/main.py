@@ -493,6 +493,8 @@ def generate_embeddings(
     data = check_inputs(data, out_dir, override)
     processed = process_inputs(data, out_dir, ccd)
 
+    print("Finished procesing inputs.")
+
     # Create data module
     data_module = BoltzInferenceDataModule(
         manifest=processed.manifest,
@@ -501,7 +503,11 @@ def generate_embeddings(
         num_workers=num_workers,
     )
 
+    print("Finished loading data module")
+
     data_loader = data_module.predict_dataloader()
+
+    print("Finished acquiring data loader")
 
     # Load model
     predict_args = {
@@ -513,14 +519,18 @@ def generate_embeddings(
         checkpoint,
         strict=True,
         predict_args=predict_args,
-        map_location="cpu",
         diffusion_process_args=asdict(BoltzDiffusionParams()),
     )
     model_module.eval()
+    model_module.cuda()
+
+    print("Finished loading model")
 
     for batch in data_loader:
-        s,z = model_module.forward_embed(batch,recycling_steps=recycling_steps)
+        s,z = model_module.forward_embed(batch.cuda(),recycling_steps=recycling_steps)
         print(s.shape,z.shape)
+
+    print("Finished")
 
 
 
