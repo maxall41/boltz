@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 import click
+import h5py
 import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.strategies import DDPStrategy
@@ -444,6 +445,11 @@ def predict(
     default=2,
 )
 @click.option(
+    "--mean",
+    type=bool,
+    default=False,
+)
+@click.option(
     "--override",
     is_flag=True,
     help="Whether to override existing found predictions. Default is False.",
@@ -451,6 +457,7 @@ def predict(
 def generate_embeddings(
     data: str,
     out_dir: str,
+    out_hdf5: str,
     cache: str = "~/.boltz",
     checkpoint: Optional[str] = None,
     devices: int = 1,
@@ -458,6 +465,7 @@ def generate_embeddings(
     recycling_steps: int = 3,
     num_workers: int = 2,
     override: bool = False,
+    mean: bool = False
 ) -> None:
     """Run predictions with Boltz-1."""
     # If cpu, write a friendly warning
@@ -541,11 +549,16 @@ def generate_embeddings(
                             i.cuda()
         return batch
 
-
-    for batch in data_loader:
-        batch = move_batch_to_device(batch,"cuda:0")
-        s,z = model_module.forward_embed(batch,recycling_steps=recycling_steps)
-        print(s.shape,z.shape)
+    with h5py.File(out_hdf5, 'w') as h5f:
+        for batch in data_loader:
+            batch = move_batch_to_device(batch,"cuda:0")
+            sinlge_emb,pair_emb = model_module.forward_embed(batch,recycling_steps=recycling_steps)
+            if mean:
+                sinlge_emb = torch.mean(sinlge_emb,dim=-1)
+                pair_emb = torch.mean(pair_emb,dim=-1)
+            print(sinlge_emb.shape,pair_emb.shape)
+            h5f.create_dataset(f"{batch.record.id}_data_single_emb", data = sinlge_emb.cpu())
+            h5f.create_dataset(f"{batch.record.id}_data_pair_emb", data = pair_emb.cpu())
 
     print("Finished")
 
