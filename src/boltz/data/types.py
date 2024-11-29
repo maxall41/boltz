@@ -368,6 +368,7 @@ class Record(JSONSerializable):
     """Record datatype."""
 
     id: str
+    label: bool
     structure: StructureInfo
     chains: list[ChainInfo]
     interfaces: list[InterfaceInfo]
@@ -437,6 +438,7 @@ class Input:
 
     structure: Structure
     msa: dict[str, MSA]
+    label: bool = False
     record: Optional[Record] = None
 
 

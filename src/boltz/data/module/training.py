@@ -119,7 +119,7 @@ def load_input(record: Record, target_dir: Path, msa_dir: Path) -> Input:
             msa = np.load(msa_dir / f"{msa_id}.npz")
             msas[chain.chain_id] = MSA(**msa)
 
-    return Input(structure, msas)
+    return Input(structure, msas, record.label)
 
 
 def collate(data: list[dict[str, Tensor]]) -> dict[str, Tensor]:
@@ -209,13 +209,10 @@ class TrainingDataset(torch.utils.data.Dataset):
         self.binder_pocket_cutoff = binder_pocket_cutoff
         self.binder_pocket_sampling_geometric_p = binder_pocket_sampling_geometric_p
         self.return_symmetries = return_symmetries
-        self.samples = []
+        self.records = []
         for dataset in datasets:
             records = dataset.manifest.records
-            if overfit is not None:
-                records = records[:overfit]
-            iterator = dataset.sampler.sample(records, np.random)
-            self.samples.append(iterator)
+            self.records.extend(records)
 
     def __getitem__(self, idx: int) -> dict[str, Tensor]:
         """Get an item from the dataset.
@@ -231,51 +228,41 @@ class TrainingDataset(torch.utils.data.Dataset):
             The sampled data features.
 
         """
-        # Pick a random dataset
-        dataset_idx = np.random.choice(
-            len(self.datasets),
-            p=self.probs,
-        )
-        dataset = self.datasets[dataset_idx]
-
-        # Get a sample from the dataset
-        sample: Sample = next(self.samples[dataset_idx])
+        dataset: Record = self.records[idx]
 
         # Get the structure
         try:
-            input_data = load_input(sample.record, dataset.target_dir, dataset.msa_dir)
+            input_data = load_input(dataset, dataset.target_dir, dataset.msa_dir)
         except Exception as e:
-            print(
-                f"Failed to load input for {sample.record.id} with error {e}. Skipping."
-            )
+            print(f"Failed to load input for {dataset.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
         # Tokenize structure
         try:
             tokenized = dataset.tokenizer.tokenize(input_data)
         except Exception as e:
-            print(f"Tokenizer failed on {sample.record.id} with error {e}. Skipping.")
+            print(f"Tokenizer failed on {dataset.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
-        # Compute crop
-        try:
-            if self.max_tokens is not None:
-                tokenized = dataset.cropper.crop(
-                    tokenized,
-                    max_atoms=self.max_atoms,
-                    max_tokens=self.max_tokens,
-                    random=np.random,
-                    chain_id=sample.chain_id,
-                    interface_id=sample.interface_id,
-                )
-        except Exception as e:
-            print(f"Cropper failed on {sample.record.id} with error {e}. Skipping.")
-            return self.__getitem__(idx)
+        # # Compute crop
+        # try:
+        #     if self.max_tokens is not None:
+        #         tokenized = dataset.cropper.crop(
+        #             tokenized,
+        #             max_atoms=self.max_atoms,
+        #             max_tokens=self.max_tokens,
+        #             random=np.random,
+        #             chain_id=sample.chain_id,
+        #             interface_id=sample.interface_id,
+        #         )
+        # except Exception as e:
+        #     print(f"Cropper failed on {sample.record.id} with error {e}. Skipping.")
+        #     return self.__getitem__(idx)
 
-        # Check if there are tokens
-        if len(tokenized.tokens) == 0:
-            msg = "No tokens in cropped structure."
-            raise ValueError(msg)
+        # # Check if there are tokens
+        # if len(tokenized.tokens) == 0:
+        #     msg = "No tokens in cropped structure."
+        #     raise ValueError(msg)
 
         # Compute features
         try:
@@ -297,7 +284,7 @@ class TrainingDataset(torch.utils.data.Dataset):
                 binder_pocket_sampling_geometric_p=self.binder_pocket_sampling_geometric_p,
             )
         except Exception as e:
-            print(f"Featurizer failed on {sample.record.id} with error {e}. Skipping.")
+            print(f"Featurizer failed on {dataset.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
         return features
