@@ -123,23 +123,23 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> bool:
         options = AllChem.ETKDGv2()
     else:
         options = AllChem.ETKDGv2()
+    options.maxAttempts = 25
 
     options.clearConfs = False
     conf_id = -1
 
     try:
-        conf_id = AllChem.EmbedMolecule(mol, options, maxAttempts=25)
+        conf_id = AllChem.EmbedMolecule(mol, options)
         AllChem.UFFOptimizeMolecule(mol, confId=conf_id, maxIters=1000)
 
     except RuntimeError:
         pass  # Force field issue here
     except ValueError:
         pass  # sanitization issue here
-
+    options.maxAttempts = 50
+    options.useRandomCoords = True
     if conf_id == -1:
-        conf_id = AllChem.EmbedMolecule(
-            mol, options, maxAttempts=50, useRandomCoords=True
-        )
+        conf_id = AllChem.EmbedMolecule(mol, options)
         AllChem.UFFOptimizeMolecule(mol, confId=conf_id, maxIters=1000)
 
     if conf_id != -1:
