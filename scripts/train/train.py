@@ -15,8 +15,9 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.utilities import rank_zero_only
-
+from boltz.main import process_inputs, download, check_inputs
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
+import pickle
 
 
 @dataclass
@@ -86,6 +87,32 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
         Any command line overrides.
 
     """
+    cache_in = "~/.boltz"
+    data_in = "../data/"
+    out_dir_in = "../out_res/"
+
+    # Set cache path
+    cache = Path(cache_in).expanduser()
+    cache.mkdir(parents=True, exist_ok=True)
+
+    # Create output directories
+    data = Path(data_in).expanduser()
+    out_dir = Path(out_dir_in).expanduser()
+    out_dir = out_dir / f"boltz_results_{data.stem}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download necessary data and model
+    download(cache)
+
+    # Load CCD
+    ccd_path = cache / "ccd.pkl"
+    with ccd_path.open("rb") as file:
+        ccd = pickle.load(file)  # noqa: S301
+
+    # Check if data is a directory
+    data = check_inputs(data, out_dir, False)
+    processed = process_inputs(data, out_dir, ccd)
+
     # Load the configuration
     raw_config = omegaconf.OmegaConf.load(raw_config)
 
@@ -122,6 +149,11 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
 
     # Create objects
     data_config = DataConfig(**cfg.data)
+    data_config.datasets[0].target_dir = processed.targets_dir
+    data_config.datasets[0].msa_dir = processed.msa_dir
+    data_config.datasets[0].manifest_path = processed.manifest
+    if len(data_config.datasets) > 1:
+        raise Exception("More than one dataset!")
     data_module = BoltzTrainingDataModule(data_config)
     model_module = cfg.model
 

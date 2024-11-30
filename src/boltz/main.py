@@ -24,6 +24,12 @@ CCD_URL = "https://www.dropbox.com/scl/fi/h4mjhcbhzzkkj4piu1k6x/ccd.pkl?rlkey=p4
 MODEL_URL = "https://www.dropbox.com/scl/fi/8qo9aryyttzp97z74dchn/boltz1.ckpt?rlkey=jvxl2jsn0kajnyfmesbj4lb89&st=dipi1sbw&dl=1"
 
 
+@click.group()
+def cli() -> None:
+    """Boltz1."""
+    return
+
+
 @dataclass
 class BoltzProcessedInput:
     """Processed input data."""
@@ -222,12 +228,6 @@ def process_inputs(
         targets_dir=structure_dir,
         msa_dir=processed_msa_dir,
     )
-
-
-@click.group()
-def cli() -> None:
-    """Boltz1."""
-    return
 
 
 @cli.command()
