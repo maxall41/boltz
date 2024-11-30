@@ -128,13 +128,19 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> bool:
     conf_id = -1
 
     try:
-        conf_id = AllChem.EmbedMolecule(mol, options)
+        conf_id = AllChem.EmbedMolecule(mol, options, maxAttempts=25)
         AllChem.UFFOptimizeMolecule(mol, confId=conf_id, maxIters=1000)
 
     except RuntimeError:
         pass  # Force field issue here
     except ValueError:
         pass  # sanitization issue here
+
+    if conf_id == -1:
+        conf_id = AllChem.EmbedMolecule(
+            mol, options, maxAttempts=50, useRandomCoords=True
+        )
+        AllChem.UFFOptimizeMolecule(mol, confId=conf_id, maxIters=1000)
 
     if conf_id != -1:
         conformer = mol.GetConformer(conf_id)

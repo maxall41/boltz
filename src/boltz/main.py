@@ -179,13 +179,17 @@ def process_inputs(
     # Parse input data
     records: list[Record] = []
     for path in tqdm(data):
-        # Parse data
-        if path.suffix == ".fasta":
-            target = parse_fasta(path, ccd)
-        elif path.suffix == ".yaml":
-            target = parse_yaml(path, ccd)
-        else:
-            raise Exception(f"Invalid suffix: {path.suffix} - path: {path}")
+        try:
+            # Parse data
+            if path.suffix == ".fasta":
+                target = parse_fasta(path, ccd)
+            elif path.suffix == ".yaml":
+                target = parse_yaml(path, ccd)
+            else:
+                raise Exception(f"Invalid suffix: {path.suffix} - path: {path}")
+        except ValueError as e:
+            print(f"Failed to parse yaml file: {path} - exception: {e}")
+            continue
 
         # Keep record
         records.append(target.record)
