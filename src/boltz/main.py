@@ -184,6 +184,8 @@ def process_inputs(
             target = parse_fasta(path, ccd)
         elif path.suffix == ".yaml":
             target = parse_yaml(path, ccd)
+        else:
+            raise Exception(f"Invalid suffix: {path.suffix} - path: {path}")
 
         # Keep record
         records.append(target.record)
