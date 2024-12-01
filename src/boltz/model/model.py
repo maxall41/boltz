@@ -291,7 +291,7 @@ class Boltz1(LightningModule):
             multiplicity_diffusion_train=-1,
             diffusion_samples=-1,
         )
-        label = torch.tensor(batch["label"]).unsqueeze(dim=0)
+        label = torch.tensor(batch["label"], device=out.device).unsqueeze(dim=0)
         # print(out, label)
         loss = F.binary_cross_entropy_with_logits(out, label)
         self.log("train/loss", loss)
