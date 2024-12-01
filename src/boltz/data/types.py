@@ -438,7 +438,7 @@ class Input:
 
     structure: Structure
     msa: dict[str, MSA]
-    label: bool = False
+    label: float = False
     record: Optional[Record] = None
 
 
