@@ -123,7 +123,7 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         Whether computation was successful.
 
     """
-    conformer_dir = f"./conformer_cache/"
+    conformer_dir = f"./conformer_cache"
     if not os.path.exists(conformer_dir):
         os.mkdir(conformer_dir)
     mol_path = f"{conformer_dir}/{get_mol_id(mol)}.mol"
