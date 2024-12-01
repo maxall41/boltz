@@ -129,7 +129,7 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         Path.mkdir(conformer_dir)
     mol_path = conformer_dir / f"{get_mol_id(mol)}.mol"
     if Path.exists(mol_path):
-        mol = AllChem.MolFromMolFile(mol_path, removeHs=False)
+        mol = AllChem.MolFromMolFile(mol_path)
         conformer = mol.GetConformer(0)
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
