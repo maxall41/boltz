@@ -128,6 +128,7 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         os.mkdir(conformer_dir)
     mol_path = f"{conformer_dir}/{get_mol_id(mol)}.mol"
     if os.path.exists(mol_path):
+        print("Loading mol", mol_path)
         mol = AllChem.MolFromMolFile(mol_path)
         return (True, mol)
     if version == "v3":
