@@ -9,6 +9,7 @@ from rdkit.Chem.rdchem import Conformer, Mol
 import hashlib
 from boltz.data import const
 import os
+from pathlib import Path
 from boltz.data.types import (
     Atom,
     Bond,
@@ -123,11 +124,11 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         Whether computation was successful.
 
     """
-    conformer_dir = f"./conformer_cache"
-    if not os.path.exists(conformer_dir):
-        os.mkdir(conformer_dir)
-    mol_path = f"{conformer_dir}/{get_mol_id(mol)}.mol"
-    if os.path.exists(mol_path):
+    conformer_dir = Path("./conformer_cache")
+    if not Path.exists(conformer_dir):
+        Path.mkdir(conformer_dir)
+    mol_path = conformer_dir / f"{get_mol_id(mol)}.mol"
+    if Path.exists(mol_path):
         mol = AllChem.MolFromMolFile(mol_path, removeHs=False)
         conformer = mol.GetConformer(0)
         conformer.SetProp("name", "Computed")
@@ -165,9 +166,7 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         conformer = mol.GetConformer(conf_id)
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
-        AllChem.MolToMolFile(
-            mol, f"{conformer_dir}/{get_mol_id(mol)}.mol", confId=conf_id
-        )
+        AllChem.MolToMolFile(mol, mol_path, confId=conf_id)
         return (True, mol)
     return (False, mol)
 
