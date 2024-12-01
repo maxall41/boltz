@@ -152,34 +152,6 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     data_module = BoltzTrainingDataModule(data_config)
     model_module = cfg.model
 
-    if cfg.pretrained and not cfg.resume:
-        # Load the pretrained weights into the confidence module
-        if cfg.load_confidence_from_trunk:
-            checkpoint = torch.load(cfg.pretrained, map_location="cpu")
-
-            # Modify parameter names in the state_dict
-            new_state_dict = {}
-            for key, value in checkpoint["state_dict"].items():
-                if not key.startswith("structure_module") and not key.startswith(
-                    "distogram_module"
-                ):
-                    new_key = "confidence_module." + key
-                    new_state_dict[new_key] = value
-            new_state_dict.update(checkpoint["state_dict"])
-
-            # Update the checkpoint with the new state_dict
-            checkpoint["state_dict"] = new_state_dict
-        else:
-            file_path = cfg.pretrained
-
-        print(f"Loading model from {file_path}")
-        model_module = type(model_module).load_from_checkpoint(
-            file_path, strict=False, **(model_module.hparams)
-        )
-
-        if cfg.load_confidence_from_trunk:
-            os.remove(file_path)
-
     # Create checkpoint callback
     callbacks = []
     dirpath = cfg.output
@@ -235,17 +207,21 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     if not cfg.strict_loading:
         model_module.strict_loading = False
 
+    if cfg.resume is not None:
+        checkpoint = torch.load(cfg.resume)
+        model_module.load_state_dict(
+            checkpoint["state_dict"], strict=cfg.strict_loading
+        )
+
     if cfg.validation_only:
         trainer.validate(
             model_module,
             datamodule=data_module,
-            ckpt_path=cfg.resume,
         )
     else:
         trainer.fit(
             model_module,
             datamodule=data_module,
-            ckpt_path=cfg.resume,
         )
 
 
