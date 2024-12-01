@@ -142,6 +142,9 @@ def collate(data: list[dict[str, Tensor]]) -> dict[str, Tensor]:
     collated = {}
     for key in keys:
         values = [d[key] for d in data]
+        if key == "label":
+            collated[key] = values
+            continue
 
         if key not in [
             "all_coords",

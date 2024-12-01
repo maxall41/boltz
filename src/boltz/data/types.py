@@ -368,7 +368,7 @@ class Record(JSONSerializable):
     """Record datatype."""
 
     id: str
-    label: bool
+    label: float
     structure: StructureInfo
     chains: list[ChainInfo]
     interfaces: list[InterfaceInfo]
