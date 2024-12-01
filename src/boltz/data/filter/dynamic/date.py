@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Literal
 
-from boltz.data.types import Record
 from boltz.data.filter.dynamic.filter import DynamicFilter
+from boltz.data.types import Record
 
 
 class DateFilter(DynamicFilter):

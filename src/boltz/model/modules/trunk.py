@@ -1,7 +1,7 @@
 from typing import Dict, Tuple
 
-from fairscale.nn.checkpoint.checkpoint_activations import checkpoint_wrapper
 import torch
+from fairscale.nn.checkpoint.checkpoint_activations import checkpoint_wrapper
 from torch import Tensor, nn
 
 from boltz.data import const
@@ -288,7 +288,6 @@ class MSALayer(nn.Module):
 
         Parameters
         ----------
-
         msa_s : int
             The MSA embedding size.
         token_z : int
@@ -514,6 +513,7 @@ class PairformerModule(nn.Module):
             The token mask
         pair_mask : Tensor
             The pairwise mask
+
         Returns
         -------
         Tensor

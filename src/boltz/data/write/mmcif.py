@@ -1,5 +1,5 @@
 import io
-from typing import Iterator
+from collections.abc import Iterator
 
 import ihm
 from modelcif import Assembly, AsymUnit, Entity, System, dumper

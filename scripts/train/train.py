@@ -1,4 +1,5 @@
 import os
+import pickle
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,9 +16,10 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.utilities import rank_zero_only
-from boltz.main import process_inputs, download, check_inputs
+
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
-import pickle
+from boltz.main import check_inputs, download, process_inputs
+import fire
 
 
 @dataclass
@@ -76,7 +78,7 @@ class TrainConfig:
     load_confidence_from_trunk: Optional[bool] = False
 
 
-def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR0915
+def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  # noqa: C901, PLR0912, PLR0915
     """Run training.
 
     Parameters
@@ -88,17 +90,14 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
 
     """
     cache_in = "~/.boltz"
-    data_in = args[0]
-    out_dir_in = args[1]
-    sample = args[2]
 
     # Set cache path
     cache = Path(cache_in).expanduser()
     cache.mkdir(parents=True, exist_ok=True)
 
     # Create output directories
-    data = Path(data_in).expanduser()
-    out_dir = Path(out_dir_in).expanduser()
+    data = Path(data_dir).expanduser()
+    out_dir = Path(out_dir).expanduser()
     out_dir = out_dir / f"boltz_results_{data.stem}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -252,6 +251,4 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
 
 
 if __name__ == "__main__":
-    arg1 = sys.argv[1]
-    arg2 = sys.argv[2:]
-    train(arg1, arg2)
+    fire.Fire(train)

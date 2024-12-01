@@ -1,8 +1,8 @@
 # started from code from https://github.com/lucidrains/alphafold3-pytorch, MIT License, Copyright (c) 2024 Phil Wang
 
-from einops import einsum
 import torch
 import torch.nn.functional as F
+from einops import einsum
 
 
 def weighted_rigid_align(
@@ -30,7 +30,6 @@ def weighted_rigid_align(
         Aligned coordinates
 
     """
-
     batch_size, num_points, dim = true_coords.shape
     weights = (mask * weights).unsqueeze(-1)
 
@@ -121,6 +120,7 @@ def smooth_lddt_loss(
         The non nucleic acid cutoff
     multiplicity: int
         The multiplicity
+
     Returns
     -------
     torch.Tensor

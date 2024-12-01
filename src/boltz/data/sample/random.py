@@ -1,10 +1,11 @@
+from collections.abc import Iterator
 from dataclasses import replace
-from typing import Iterator, List
+from typing import List
 
 from numpy.random import RandomState
 
-from boltz.data.types import Record
 from boltz.data.sample.sampler import Sample, Sampler
+from boltz.data.types import Record
 
 
 class RandomSampler(Sampler):

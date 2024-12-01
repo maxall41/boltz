@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from boltz.data.types import Record
 from boltz.data.filter.dynamic.filter import DynamicFilter
+from boltz.data.types import Record
 
 
 class SubsetFilter(DynamicFilter):

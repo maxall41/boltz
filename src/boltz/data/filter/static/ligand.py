@@ -1,8 +1,8 @@
 import numpy as np
 
 from boltz.data import const
-from boltz.data.types import Structure
 from boltz.data.filter.static.filter import StaticFilter
+from boltz.data.types import Structure
 
 LIGAND_EXCLUSION = {
     "144",

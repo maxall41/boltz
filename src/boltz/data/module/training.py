@@ -11,9 +11,8 @@ from torch.utils.data import DataLoader
 from boltz.data.crop.cropper import Cropper
 from boltz.data.feature.featurizer import BoltzFeaturizer
 from boltz.data.feature.pad import pad_to_max
-from boltz.data.feature.symmetry import get_symmetries
 from boltz.data.filter.dynamic.filter import DynamicFilter
-from boltz.data.sample.sampler import Sample, Sampler
+from boltz.data.sample.sampler import Sampler
 from boltz.data.tokenize.tokenizer import Tokenizer
 from boltz.data.types import MSA, Input, Manifest, Record, Structure
 
@@ -27,7 +26,7 @@ class DatasetConfig:
     prob: float
     sampler: Sampler
     cropper: Cropper
-    manifest_path: Manifest
+    manifest_path: Optional[Manifest] = None
     filters: Optional[list] = None
     split: Optional[str] = None
 
@@ -452,7 +451,8 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
             # Set target_dir
             target_dir = Path(data_config.target_dir)
             msa_dir = Path(data_config.msa_dir)
-            #
+            if data_config.manifest_path is None:
+                raise Exception("Missing manifest!")
             manifest: Manifest = data_config.manifest_path
 
             # Split records if given

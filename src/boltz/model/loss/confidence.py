@@ -109,7 +109,6 @@ def resolved_loss(
         Resolved loss
 
     """
-
     # extract necessary features
     token_to_rep_atom = feats["token_to_rep_atom"]
     token_to_rep_atom = token_to_rep_atom.repeat_interleave(multiplicity, 0).float()
@@ -164,7 +163,6 @@ def plddt_loss(
         Plddt loss
 
     """
-
     # extract necessary features
     atom_mask = true_coords_resolved_mask
 
@@ -271,7 +269,6 @@ def pde_loss(
         Pde loss
 
     """
-
     # extract necessary features
     token_to_rep_atom = feats["token_to_rep_atom"]
     token_to_rep_atom = token_to_rep_atom.repeat_interleave(multiplicity, 0).float()
@@ -440,11 +437,10 @@ def lddt_dist(dmat_predicted, dmat_true, mask, cutoff=15.0, per_atom=False):
         norm = 1.0 / (1e-10 + torch.sum(dists_to_score, dim=-1))
         score = norm * (1e-10 + torch.sum(dists_to_score * score, dim=-1))
         return score, mask_no_match.float()
-    else:
-        norm = 1.0 / (1e-10 + torch.sum(dists_to_score, dim=(-2, -1)))
-        score = norm * (1e-10 + torch.sum(dists_to_score * score, dim=(-2, -1)))
-        total = torch.sum(dists_to_score, dim=(-1, -2))
-        return score, total
+    norm = 1.0 / (1e-10 + torch.sum(dists_to_score, dim=(-2, -1)))
+    score = norm * (1e-10 + torch.sum(dists_to_score * score, dim=(-2, -1)))
+    total = torch.sum(dists_to_score, dim=(-1, -2))
+    return score, total
 
 
 def express_coordinate_in_frame(atom_coords, frame_atom_a, frame_atom_b, frame_atom_c):

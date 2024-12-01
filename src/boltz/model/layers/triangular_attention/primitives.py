@@ -15,14 +15,14 @@
 
 import importlib
 import math
-from typing import Optional, Callable, List, Tuple
+from typing import Callable, List, Optional, Tuple
 
+from boltz.model.layers import initialize
 from boltz.model.layers.triangular_attention.utils import (
-    permute_final_dims,
     flatten_final_dims,
     is_fp16_enabled,
+    permute_final_dims,
 )
-from boltz.model.layers import initialize
 
 deepspeed_is_installed = importlib.util.find_spec("deepspeed") is not None
 ds4s_is_installed = (
@@ -42,7 +42,7 @@ if fa_is_installed:
 
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 DEFAULT_LMA_Q_CHUNK_SIZE = 1024
 DEFAULT_LMA_KV_CHUNK_SIZE = 4096
@@ -98,23 +98,22 @@ class Linear(nn.Linear):
         with torch.no_grad():
             if init_fn is not None:
                 init_fn(self.weight, self.bias)
+            elif init == "default":
+                initialize.lecun_normal_init_(self.weight)
+            elif init == "relu":
+                initialize.he_normal_init_(self.weight)
+            elif init == "glorot":
+                initialize.glorot_uniform_init_(self.weight)
+            elif init == "gating":
+                initialize.gating_init_(self.weight)
+                if bias:
+                    self.bias.fill_(1.0)
+            elif init == "normal":
+                initialize.normal_init_(self.weight)
+            elif init == "final":
+                initialize.final_init_(self.weight)
             else:
-                if init == "default":
-                    initialize.lecun_normal_init_(self.weight)
-                elif init == "relu":
-                    initialize.he_normal_init_(self.weight)
-                elif init == "glorot":
-                    initialize.glorot_uniform_init_(self.weight)
-                elif init == "gating":
-                    initialize.gating_init_(self.weight)
-                    if bias:
-                        self.bias.fill_(1.0)
-                elif init == "normal":
-                    initialize.normal_init_(self.weight)
-                elif init == "final":
-                    initialize.final_init_(self.weight)
-                else:
-                    raise ValueError("Invalid init string.")
+                raise ValueError("Invalid init string.")
 
         self.precision = precision
 
@@ -441,7 +440,9 @@ class Attention(nn.Module):
                 Query chunk size (for LMA)
             lma_kv_chunk_size:
                 Key/Value chunk size (for LMA)
+
         Returns
+        -------
             [*, Q, C_q] attention update
         """
         if use_lma and (lma_q_chunk_size is None or lma_kv_chunk_size is None):
@@ -527,7 +528,6 @@ def _deepspeed_evo_attn(
         biases:
             List of biases that broadcast to [*, H, Q, K]
     """
-
     if not ds4s_is_installed:
         raise ValueError(
             "_deepspeed_evo_attn requires that DeepSpeed be installed "

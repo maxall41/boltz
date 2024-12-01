@@ -1,6 +1,6 @@
 import gc
 import random
-from typing import Any, Optional, Dict
+from typing import Any, Optional
 
 import torch
 import torch._dynamo
@@ -24,11 +24,8 @@ from boltz.model.loss.validation import (
     factored_token_lddt_dist_loss,
     weighted_minimum_rmsd,
 )
-from boltz.model.modules.confidence import ConfidenceModule
-from boltz.model.modules.diffusion import AtomDiffusion
 from boltz.model.modules.encoders import RelativePositionEncoder
 from boltz.model.modules.trunk import (
-    DistogramModule,
     InputEmbedder,
     MSAModule,
     PairformerModule,
@@ -38,7 +35,7 @@ from boltz.model.optim.scheduler import AlphaFoldLRScheduler
 
 
 class Boltz1(LightningModule):
-    def __init__(  # noqa: PLR0915, C901, PLR0912
+    def __init__(  # noqa: PLR0915, C901
         self,
         atom_s: int,
         atom_z: int,
@@ -304,8 +301,7 @@ class Boltz1(LightningModule):
                     rmsds.append(rmsd)
                     true_coords.append(best_true_coords)
                     true_coords_resolved_mask.append(best_true_coords_resolved_mask)
-                    if rmsd < best_rmsd:
-                        best_rmsd = rmsd
+                    best_rmsd = min(rmsd, best_rmsd)
                 best_rmsds.append(best_rmsd)
             true_coords = torch.cat(true_coords, dim=0)
             true_coords_resolved_mask = torch.cat(true_coords_resolved_mask, dim=0)
@@ -499,8 +495,7 @@ class Boltz1(LightningModule):
                 torch.cuda.empty_cache()
                 gc.collect()
                 return
-            else:
-                raise e
+            raise e
 
         try:
             # Compute distogram LDDT
@@ -553,8 +548,7 @@ class Boltz1(LightningModule):
                 torch.cuda.empty_cache()
                 gc.collect()
                 return
-            else:
-                raise e
+            raise e
         # if the multiplicity used is > 1 then we take the best lddt of the different samples
         # AF3 combines this with the confidence based filtering
         best_lddt_dict, best_total_dict = {}, {}
@@ -1038,12 +1032,10 @@ class Boltz1(LightningModule):
                 torch.cuda.empty_cache()
                 gc.collect()
                 return {"exception": True}
-            else:
-                raise {"exception": True}
+            raise {"exception": True}
 
     def configure_optimizers(self):
         """Configure the optimizer."""
-
         if self.structure_prediction_training:
             parameters = [p for p in self.parameters() if p.requires_grad]
         else:

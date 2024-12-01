@@ -1,9 +1,10 @@
-from typing import Iterator, List
+from collections.abc import Iterator
+from typing import List
 
 from numpy.random import RandomState
 
-from boltz.data.types import Record
 from boltz.data.sample.sampler import Sample, Sampler
+from boltz.data.types import Record
 
 
 class DistillationSampler(Sampler):

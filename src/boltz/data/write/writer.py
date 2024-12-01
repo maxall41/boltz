@@ -147,7 +147,7 @@ class BoltzWriter(BasePredictionWriter):
 
     def on_predict_epoch_end(
         self,
-        trainer: Trainer,  # noqa: ARG00s2
+        trainer: Trainer,
         pl_module: LightningModule,  # noqa: ARG002
     ) -> None:
         """Print the number of failed examples."""

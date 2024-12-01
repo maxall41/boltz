@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 from math import sqrt
-import random
 
-from einops import rearrange
 import torch
+import torch.nn.functional as F
+from einops import rearrange
 from torch import nn
 from torch.nn import Module
-import torch.nn.functional as F
 
-from boltz.data import const
 import boltz.model.layers.initialize as init
+from boltz.data import const
 from boltz.model.loss.diffusion import (
     smooth_lddt_loss,
     weighted_rigid_align,
@@ -103,7 +102,6 @@ class DiffusionModule(Module):
             Whether to offload the activations to CPU, by default False.
 
         """
-
         super().__init__()
 
         self.atoms_per_window_queries = atoms_per_window_queries
@@ -249,7 +247,6 @@ class OutTokenFeatUpdate(Module):
             The dimension of the fourier embedding, by default 256.
 
         """
-
         super().__init__()
         self.sigma_data = sigma_data
 

@@ -28,6 +28,8 @@ dependencies = [
     "pyyaml==6.0.2",
     "biopython==1.84",
     "scipy==1.13.1",
+    "h5py>=3.12.1",
+    "fire>=0.7.0",
 ]
 
 [project.scripts]

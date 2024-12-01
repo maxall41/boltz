@@ -113,25 +113,24 @@ class PairWeightedAveraging(nn.Module):
                 else:
                     o_out += o_chunks @ sliced_weight_proj_o.T
             return o_out
-        else:
-            # Project input tensors
-            v: Tensor = self.proj_m(m)
-            v = v.reshape(*v.shape[:3], self.num_heads, self.c_h)
-            v = v.permute(0, 3, 1, 2, 4)
+        # Project input tensors
+        v: Tensor = self.proj_m(m)
+        v = v.reshape(*v.shape[:3], self.num_heads, self.c_h)
+        v = v.permute(0, 3, 1, 2, 4)
 
-            # Compute weights
-            b: Tensor = self.proj_z(z)
-            b = b.permute(0, 3, 1, 2)
-            b = b + (1 - mask[:, None]) * -self.inf
-            w = torch.softmax(b, dim=-1)
+        # Compute weights
+        b: Tensor = self.proj_z(z)
+        b = b.permute(0, 3, 1, 2)
+        b = b + (1 - mask[:, None]) * -self.inf
+        w = torch.softmax(b, dim=-1)
 
-            # Compute gating
-            g: Tensor = self.proj_g(m)
-            g = g.sigmoid()
+        # Compute gating
+        g: Tensor = self.proj_g(m)
+        g = g.sigmoid()
 
-            # Compute output
-            o = torch.einsum("bhij,bhsjd->bhsid", w, v)
-            o = o.permute(0, 2, 3, 1, 4)
-            o = o.reshape(*o.shape[:3], self.num_heads * self.c_h)
-            o = self.proj_o(g * o)
-            return o
+        # Compute output
+        o = torch.einsum("bhij,bhsjd->bhsid", w, v)
+        o = o.permute(0, 2, 3, 1, 4)
+        o = o.reshape(*o.shape[:3], self.num_heads * self.c_h)
+        o = self.proj_o(g * o)
+        return o

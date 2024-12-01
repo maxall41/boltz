@@ -530,7 +530,7 @@ def get_ligand_symmetries(cropped, symmetries):
         # check if molecule is already added by identifying it through asym_id and res_idx
         atom_count += token["atom_num"]
         mol_id = (token["asym_id"], token["res_idx"])
-        if mol_id in added_molecules.keys():
+        if mol_id in added_molecules:
             added_molecules[mol_id] += token["atom_num"]
             continue
         added_molecules[mol_id] = token["atom_num"]
@@ -551,51 +551,50 @@ def get_ligand_symmetries(cropped, symmetries):
     # for each molecule, get the symmetries
     molecule_symmetries = []
     for mol_name, start_mol, mol_id, mol_atom_names in index_mols:
-        if not mol_name in symmetries:
+        if mol_name not in symmetries:
             continue
-        else:
-            swaps = []
-            syms_ccd, mol_atom_names_ccd = symmetries[mol_name]
-            # Get indices of mol_atom_names_ccd that are in mol_atom_names
-            ccd_to_valid_ids = {
-                mol_atom_names_ccd.index(name): i
-                for i, name in enumerate(mol_atom_names)
-            }
-            ccd_valid_ids = set(ccd_to_valid_ids.keys())
+        swaps = []
+        syms_ccd, mol_atom_names_ccd = symmetries[mol_name]
+        # Get indices of mol_atom_names_ccd that are in mol_atom_names
+        ccd_to_valid_ids = {
+            mol_atom_names_ccd.index(name): i
+            for i, name in enumerate(mol_atom_names)
+        }
+        ccd_valid_ids = set(ccd_to_valid_ids.keys())
 
-            syms = []
-            # Get syms
-            for sym_ccd in syms_ccd:
-                sym_dict = {}
-                bool_add = True
-                for i, j in enumerate(sym_ccd):
-                    if i in ccd_valid_ids:
-                        if j in ccd_valid_ids:
-                            i_true = ccd_to_valid_ids[i]
-                            j_true = ccd_to_valid_ids[j]
-                            sym_dict[i_true] = j_true
-                        else:
-                            bool_add = False
-                            break
-                if bool_add:
-                    syms.append([sym_dict[i] for i in range(len(ccd_valid_ids))])
+        syms = []
+        # Get syms
+        for sym_ccd in syms_ccd:
+            sym_dict = {}
+            bool_add = True
+            for i, j in enumerate(sym_ccd):
+                if i in ccd_valid_ids:
+                    if j in ccd_valid_ids:
+                        i_true = ccd_to_valid_ids[i]
+                        j_true = ccd_to_valid_ids[j]
+                        sym_dict[i_true] = j_true
+                    else:
+                        bool_add = False
+                        break
+            if bool_add:
+                syms.append([sym_dict[i] for i in range(len(ccd_valid_ids))])
 
-            for sym in syms:
-                if len(sym) != added_molecules[mol_id]:
-                    raise Exception(
-                        f"Symmetry length mismatch {len(sym)} {added_molecules[mol_id]}"
-                    )
-                # assert (
-                #     len(sym) == added_molecules[mol_id]
-                # ), f"Symmetry length mismatch {len(sym)} {added_molecules[mol_id]}"
-                sym_new_idx = []
-                for i, j in enumerate(sym):
-                    if i != int(j):
-                        sym_new_idx.append((i + start_mol, int(j) + start_mol))
-                if len(sym_new_idx) > 0:
-                    swaps.append(sym_new_idx)
-            if len(swaps) > 0:
-                molecule_symmetries.append(swaps)
+        for sym in syms:
+            if len(sym) != added_molecules[mol_id]:
+                raise Exception(
+                    f"Symmetry length mismatch {len(sym)} {added_molecules[mol_id]}"
+                )
+            # assert (
+            #     len(sym) == added_molecules[mol_id]
+            # ), f"Symmetry length mismatch {len(sym)} {added_molecules[mol_id]}"
+            sym_new_idx = []
+            for i, j in enumerate(sym):
+                if i != int(j):
+                    sym_new_idx.append((i + start_mol, int(j) + start_mol))
+            if len(sym_new_idx) > 0:
+                swaps.append(sym_new_idx)
+        if len(swaps) > 0:
+            molecule_symmetries.append(swaps)
 
     features = {"ligand_symmetries": molecule_symmetries}
 

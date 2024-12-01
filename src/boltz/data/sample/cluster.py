@@ -1,11 +1,12 @@
-from typing import Dict, Iterator, List
+from collections.abc import Iterator
+from typing import Dict, List
 
 import numpy as np
 from numpy.random import RandomState
 
 from boltz.data import const
-from boltz.data.types import ChainInfo, InterfaceInfo, Record
 from boltz.data.sample.sampler import Sample, Sampler
+from boltz.data.types import ChainInfo, InterfaceInfo, Record
 
 
 def get_chain_cluster(chain: ChainInfo, record: Record) -> str:  # noqa: ARG001

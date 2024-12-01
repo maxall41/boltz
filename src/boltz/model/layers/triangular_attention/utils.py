@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
 
@@ -58,14 +59,13 @@ def dict_map(fn, dic, leaf_type):
 def tree_map(fn, tree, leaf_type):
     if isinstance(tree, dict):
         return dict_map(fn, tree, leaf_type)
-    elif isinstance(tree, list):
+    if isinstance(tree, list):
         return [tree_map(fn, x, leaf_type) for x in tree]
-    elif isinstance(tree, tuple):
+    if isinstance(tree, tuple):
         return tuple([tree_map(fn, x, leaf_type) for x in tree])
-    elif isinstance(tree, leaf_type):
+    if isinstance(tree, leaf_type):
         return fn(tree)
-    else:
-        raise ValueError(f"Tree of type {type(tree)} not supported")
+    raise ValueError(f"Tree of type {type(tree)} not supported")
 
 
 tensor_tree_map = partial(tree_map, leaf_type=torch.Tensor)
@@ -144,7 +144,7 @@ def _get_minimal_slice_set(
     # one-dimensional tensor can be simply sliced
     if len(start) == 0:
         return [tuple()]
-    elif len(start) == 1:
+    if len(start) == 1:
         return [(slice(start[0], end[0] + 1),)]
 
     slices = []
@@ -237,7 +237,6 @@ def _chunk_slice(
     in this function are performed on sub-tensors that scale with
     (flat_end - flat_start), the chunk size.
     """
-
     batch_dims = t.shape[:no_batch_dims]
     start_idx = list(_flat_idx_to_idx(flat_start, batch_dims))
     # _get_minimal_slice_set is inclusive
@@ -289,7 +288,9 @@ def chunk_layer(
             Avoids flattening potentially large input tensors. Unnecessary
             in most cases, and is ever so slightly slower than the default
             setting.
-    Returns:
+
+    Returns
+    -------
         The reassembled output of the layer on the inputs.
     """
     if not (len(inputs) > 0):
@@ -300,7 +301,7 @@ def chunk_layer(
 
     def _prep_inputs(t):
         if not low_mem:
-            if not sum(t.shape[:no_batch_dims]) == no_batch_dims:
+            if sum(t.shape[:no_batch_dims]) != no_batch_dims:
                 t = t.expand(orig_batch_dims + t.shape[no_batch_dims:])
             t = t.reshape(-1, *t.shape[no_batch_dims:])
         else:
@@ -351,11 +352,10 @@ def chunk_layer(
                 for k, v in d1.items():
                     if type(v) is dict:
                         assign(v, d2[k])
+                    elif _add_into_out:
+                        v[i : i + chunk_size] += d2[k]
                     else:
-                        if _add_into_out:
-                            v[i : i + chunk_size] += d2[k]
-                        else:
-                            v[i : i + chunk_size] = d2[k]
+                        v[i : i + chunk_size] = d2[k]
 
             assign(out, output_chunk)
         elif out_type is tuple:

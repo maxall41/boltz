@@ -1,9 +1,8 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
 
-from boltz.data import const
 import boltz.model.layers.initialize as init
+from boltz.data import const
 from boltz.model.modules.confidence_utils import (
     compute_aggregated_metric,
     compute_ptms,
@@ -74,7 +73,6 @@ class ConfidenceModule(nn.Module):
             Whether to compile pairformer, by default False.
 
         """
-
         super().__init__()
         self.max_num_atoms_per_token = 23
         self.no_update_s = pairformer_args.get("no_update_s", False)
@@ -321,7 +319,6 @@ class ConfidenceHeads(nn.Module):
         compute_pae : bool
             Whether to compute pae, by default False
         """
-
         super().__init__()
         self.max_num_atoms_per_token = 23
         self.to_pde_logits = LinearNoBias(token_z, num_pde_bins)

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator, List, Optional
+from typing import List, Optional
 
 from numpy.random import RandomState
 

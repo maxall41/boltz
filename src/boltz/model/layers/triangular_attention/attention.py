@@ -17,7 +17,7 @@ from functools import partial, partialmethod
 from typing import List, Optional
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from boltz.model.layers.triangular_attention.primitives import (
     Attention,
@@ -68,7 +68,7 @@ class TriangleAttention(nn.Module):
         use_lma: bool = False,
         inplace_safe: bool = False,
     ) -> torch.Tensor:
-        "triangle! triangle!"
+        """triangle! triangle!"""
         mha_inputs = {
             "q_x": x,
             "kv_x": x,
@@ -102,7 +102,9 @@ class TriangleAttention(nn.Module):
         Args:
             x:
                 [*, I, J, C_in] input tensor (e.g. the pair representation)
-        Returns:
+
+        Returns
+        -------
             [*, I, J, C_in] output tensor
         """
         if mask is None:

@@ -4,11 +4,11 @@ from functools import partial
 from typing import Optional
 
 import torch
-from torch.nn import (
-    Module,
-    Linear,
-)
 import torch.nn.functional as F
+from torch.nn import (
+    Linear,
+    Module,
+)
 from torch.types import Device
 
 LinearNoBias = partial(Linear, bias=False)
@@ -106,7 +106,8 @@ def center_random_augmentation(
 
 class ExponentialMovingAverage:
     """from https://github.com/yang-song/score_sde_pytorch/blob/main/models/ema.py, Apache-2.0 license
-    Maintains (exponential) moving average of a set of parameters."""
+    Maintains (exponential) moving average of a set of parameters.
+    """
 
     def __init__(self, parameters, decay, use_num_updates=True):
         """
@@ -225,7 +226,8 @@ def _copysign(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         a: source tensor.
         b: tensor whose signs will be used, of the same shape as a.
 
-    Returns:
+    Returns
+    -------
         Tensor of the same shape as a with the signs of b.
     """
     signs_differ = (a < 0) != (b < 0)
@@ -240,7 +242,8 @@ def quaternion_to_matrix(quaternions: torch.Tensor) -> torch.Tensor:
         quaternions: quaternions with real part first,
             as tensor of shape (..., 4).
 
-    Returns:
+    Returns
+    -------
         Rotation matrices as tensor of shape (..., 3, 3).
     """
     r, i, j, k = torch.unbind(quaternions, -1)
@@ -277,7 +280,8 @@ def random_quaternions(
         device: Desired device of returned tensor. Default:
             uses the current device for the default tensor type.
 
-    Returns:
+    Returns
+    -------
         Quaternions as tensor of shape (N, 4).
     """
     if isinstance(device, str):
@@ -300,7 +304,8 @@ def random_rotations(
         device: Device of returned tensor. Default: if None,
             uses the current device for the default tensor type.
 
-    Returns:
+    Returns
+    -------
         Rotation matrices as tensor of shape (n, 3, 3).
     """
     quaternions = random_quaternions(n, dtype=dtype, device=device)
