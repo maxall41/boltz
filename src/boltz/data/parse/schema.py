@@ -159,9 +159,8 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         conformer = mol.GetConformer(conf_id)
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
-
+        AllChem.MolToMolFile(mol, f"{conformer_dir}/{get_mol_id(mol)}.mol")
         return (True, mol)
-    AllChem.MolToMolFile(mol, f"./conformer_cache/{get_mol_id(mol)}.mol")
     return (False, mol)
 
 
