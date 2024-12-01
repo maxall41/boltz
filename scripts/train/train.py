@@ -192,7 +192,8 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     if (isinstance(devices, int) and devices > 1) or (
         isinstance(devices, (list, listconfig.ListConfig)) and len(devices) > 1
     ):
-        strategy = FSDPStrategy()
+        strategy = FSDPStrategy(cpu_offload=True)
+        print("Enabled FSDP with cpu offload!")
 
     trainer = pl.Trainer(
         default_root_dir=str(dirpath),
