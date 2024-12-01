@@ -264,8 +264,8 @@ class TrainingDataset(torch.utils.data.Dataset):
         except Exception as e:
             print(f"Featurizer failed on {record.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
-
-        return (features, record.label)
+        features["label"] = record.label
+        return features
 
     def __len__(self) -> int:
         """Get the length of the dataset.

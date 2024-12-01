@@ -280,8 +280,7 @@ class Boltz1(LightningModule):
             out = self.prediction_head(sz)
             return out
 
-    def training_step(self, _in, batch_idx: int) -> Tensor:
-        batch, label = _in
+    def training_step(self, batch, batch_idx: int) -> Tensor:
         # Sample recycling steps
         recycling_steps = random.randint(0, self.training_args.recycling_steps)
 
@@ -294,7 +293,7 @@ class Boltz1(LightningModule):
             diffusion_samples=-1,
         )
 
-        loss = F.binary_cross_entropy(out, label)
+        loss = F.binary_cross_entropy(out, batch["label"])
         self.log("train/loss", loss)
         self.training_log()
         return loss
@@ -341,8 +340,7 @@ class Boltz1(LightningModule):
         norm = torch.tensor([p.norm(p=2) ** 2 for p in parameters]).sum().sqrt()
         return norm
 
-    def validation_step(self, _in, batch_idx: int):
-        batch, label = _in
+    def validation_step(self, batch, batch_idx: int):
         # Sample recycling steps
         recycling_steps = random.randint(0, self.training_args.recycling_steps)
 
@@ -355,7 +353,7 @@ class Boltz1(LightningModule):
             diffusion_samples=-1,
         )
 
-        loss = F.binary_cross_entropy(out, label)
+        loss = F.binary_cross_entropy(out, batch["label"])
         return loss
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:
