@@ -132,6 +132,9 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         conformer = mol.GetConformer(0)
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
+        canonical_order = AllChem.CanonicalRankAtoms(mol)
+        for atom, can_idx in zip(mol.GetAtoms(), canonical_order):
+            atom.SetProp("name", atom.GetSymbol().upper() + str(can_idx + 1))
         return (True, mol)
     if version == "v3":
         options = AllChem.ETKDGv3()
