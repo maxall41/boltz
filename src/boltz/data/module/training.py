@@ -279,7 +279,7 @@ class TrainingDataset(torch.utils.data.Dataset):
             The length of the dataset.
 
         """
-        return self.samples_per_epoch
+        return len(self.records)
 
 
 class ValidationDataset(torch.utils.data.Dataset):
@@ -308,7 +308,6 @@ class ValidationDataset(torch.utils.data.Dataset):
     ) -> None:
         """Initialize the validation dataset."""
         super().__init__()
-        self.datasets = datasets
         self.max_atoms = max_atoms
         self.max_tokens = max_tokens
         self.max_seqs = max_seqs
@@ -325,6 +324,11 @@ class ValidationDataset(torch.utils.data.Dataset):
         self.num_bins = num_bins
         self.binder_pocket_conditioned_prop = binder_pocket_conditioned_prop
         self.binder_pocket_cutoff = binder_pocket_cutoff
+        self.records = []
+        self.datasets = datasets
+        for dataset in datasets:
+            records = dataset.manifest.records
+            self.records.extend(records)
 
     def __getitem__(self, idx: int) -> dict[str, Tensor]:
         """Get an item from the dataset.
@@ -340,17 +344,10 @@ class ValidationDataset(torch.utils.data.Dataset):
             The sampled data features.
 
         """
-        # Pick dataset based on idx
-        for dataset in self.datasets:
-            size = len(dataset.manifest.records)
-            if self.overfit is not None:
-                size = min(size, self.overfit)
-            if idx < size:
-                break
-            idx -= size
 
         # Get a sample from the dataset
-        record = dataset.manifest.records[idx]
+        record = self.records[idx]
+        dataset = self.datasets[0]
 
         # Get the structure
         try:
@@ -364,19 +361,6 @@ class ValidationDataset(torch.utils.data.Dataset):
             tokenized = dataset.tokenizer.tokenize(input_data)
         except Exception as e:
             print(f"Tokenizer failed on {record.id} with error {e}. Skipping.")
-            return self.__getitem__(0)
-
-        # Compute crop
-        try:
-            if self.crop_validation and (self.max_tokens is not None):
-                tokenized = dataset.cropper.crop(
-                    tokenized,
-                    max_tokens=self.max_tokens,
-                    random=self.random,
-                    max_atoms=self.max_atoms,
-                )
-        except Exception as e:
-            print(f"Cropper failed on {record.id} with error {e}. Skipping.")
             return self.__getitem__(0)
 
         # Check if there are tokens
@@ -410,7 +394,7 @@ class ValidationDataset(torch.utils.data.Dataset):
         except Exception as e:
             print(f"Featurizer failed on {record.id} with error {e}. Skipping.")
             return self.__getitem__(0)
-
+        features["label"] = record.label
         return features
 
     def __len__(self) -> int:
@@ -422,12 +406,7 @@ class ValidationDataset(torch.utils.data.Dataset):
             The length of the dataset.
 
         """
-        if self.overfit is not None:
-            length = sum(len(d.manifest.records[: self.overfit]) for d in self.datasets)
-        else:
-            length = sum(len(d.manifest.records) for d in self.datasets)
-
-        return length
+        return len(self.records)
 
 
 class BoltzTrainingDataModule(pl.LightningDataModule):
