@@ -213,7 +213,13 @@ class Boltz1(LightningModule):
                     param.requires_grad = False
 
     def forward(
-        self, feats: dict[str, Tensor], recycling_steps: int = 0
+        self,
+        feats: dict[str, Tensor],
+        recycling_steps: int = 0,
+        num_sampling_steps: Optional[int] = None,
+        multiplicity_diffusion_train: int = 1,
+        diffusion_samples: int = 1,
+        run_confidence_sequentially: bool = False,
     ) -> (Tensor, Tensor):
         # Compute input embeddings
         with torch.set_grad_enabled(
