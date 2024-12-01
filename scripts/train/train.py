@@ -213,6 +213,8 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
             checkpoint["state_dict"], strict=cfg.strict_loading
         )
 
+    model_module = torch.compile(model_module)
+
     if cfg.validation_only:
         trainer.validate(
             model_module,
