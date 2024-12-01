@@ -27,9 +27,9 @@ class DatasetConfig:
     prob: float
     sampler: Sampler
     cropper: Cropper
+    manifest_path: Manifest
     filters: Optional[list] = None
     split: Optional[str] = None
-    manifest_path: Optional[str] = None
 
 
 @dataclass
@@ -452,13 +452,8 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
             # Set target_dir
             target_dir = Path(data_config.target_dir)
             msa_dir = Path(data_config.msa_dir)
-
-            # Load manifest
-            if data_config.manifest_path is not None:
-                path = Path(data_config.manifest_path)
-            else:
-                path = target_dir / "manifest.json"
-            manifest: Manifest = Manifest.load(path)
+            #
+            manifest: Manifest = data_config.manifest_path
 
             # Split records if given
             if data_config.split is not None:
