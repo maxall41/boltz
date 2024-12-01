@@ -90,6 +90,7 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
     cache_in = "~/.boltz"
     data_in = args[0]
     out_dir_in = args[1]
+    sample = args[2]
 
     # Set cache path
     cache = Path(cache_in).expanduser()
@@ -111,14 +112,10 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
 
     # Check if data is a directory
     data = check_inputs(data, out_dir, False)
-    processed = process_inputs(data, out_dir, ccd)
+    processed = process_inputs(data, out_dir, ccd, sample=sample == "true")
 
     # Load the configuration
     raw_config = omegaconf.OmegaConf.load(raw_config)
-
-    # Apply input arguments
-    args = omegaconf.OmegaConf.from_dotlist(args)
-    raw_config = omegaconf.OmegaConf.merge(raw_config, args)
 
     # Instantiate the task
     cfg = hydra.utils.instantiate(raw_config)

@@ -144,6 +144,7 @@ def process_inputs(
     out_dir: Path,
     ccd: dict[str, Mol],
     max_msa_seqs: int = 4096,
+    sample: bool = False,
 ) -> BoltzProcessedInput:
     """Process the input data and output directory.
 
@@ -178,6 +179,8 @@ def process_inputs(
 
     # Parse input data
     records: list[Record] = []
+    if sample:
+        data = data[:100]
     for path in tqdm(data):
         try:
             # Parse data
