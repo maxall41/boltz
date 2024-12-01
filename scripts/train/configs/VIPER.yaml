@@ -32,7 +32,10 @@ data:
       split: ./scripts/train/assets/validation_ids.txt
 
   # filters:
-  
+  filters:
+    - _target_: boltz.data.filter.dynamic.resolution.ResolutionFilter
+      resolution: 9.0
+
   tokenizer:
     _target_: boltz.data.tokenize.boltz.BoltzTokenizer
   featurizer:
