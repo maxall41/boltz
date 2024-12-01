@@ -785,12 +785,12 @@ def parse_boltz_schema(  # noqa: C901, PLR0915, PLR0912
             valid=True,
         )
         chain_infos.append(chain_info)
-
+    print("label", schema["label"])
     record = Record(
         id=name,
         structure=struct_info,
         chains=chain_infos,
         interfaces=[],
-        label=schema["label"] == 1.0,
+        label=schema["label"],
     )
     return Target(record=record, structure=data)
