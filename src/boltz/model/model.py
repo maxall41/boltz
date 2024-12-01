@@ -274,7 +274,7 @@ class Boltz1(LightningModule):
             s = torch.mean(s, dim=2)
             z = torch.flatten(torch.mean(z, dim=1), start_dim=1)
             print(s.shape, z.shape)
-            sz = torch.cat((s, z))
+            sz = torch.cat((s, z), dim=-1)
             print(sz.shape)
             out = self.prediction_head(sz)
             return out
