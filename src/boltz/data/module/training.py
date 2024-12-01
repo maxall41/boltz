@@ -472,11 +472,12 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
                 val_records = []
 
             # Filter training records
-            train_records = [
-                record
-                for record in train_records
-                if all(f.filter(record) for f in cfg.filters)
-            ]
+            if cfg.filters is not None:
+                train_records = [
+                    record
+                    for record in train_records
+                    if all(f.filter(record) for f in cfg.filters)
+                ]
             # Filter training records
             if data_config.filters is not None:
                 train_records = [
