@@ -6,8 +6,9 @@ import numpy as np
 from rdkit import rdBase
 from rdkit.Chem import AllChem
 from rdkit.Chem.rdchem import Conformer, Mol
-
+import hashlib
 from boltz.data import const
+import os
 from boltz.data.types import (
     Atom,
     Bond,
@@ -99,7 +100,12 @@ def convert_atom_name(name: str) -> tuple[int, int, int, int]:
     return tuple(name)
 
 
-def compute_3d_conformer(mol: Mol, version: str = "v3") -> bool:
+def get_mol_id(mol: Mol) -> str:
+    smiles = AllChem.MolToSmiles(mol)
+    return hashlib.md5(smiles.encode()).hexdigest()
+
+
+def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
     """Generate 3D coordinates using EKTDG method.
 
     Taken from `pdbeccdutils.core.component.Component`.
@@ -117,6 +123,13 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> bool:
         Whether computation was successful.
 
     """
+    conformer_dir = f"./conformer_cache/"
+    if not os.path.exists(conformer_dir):
+        os.mkdir(conformer_dir)
+    mol_path = f"{conformer_dir}/{get_mol_id(mol)}.mol"
+    if os.path.exists(mol_path):
+        mol = AllChem.MolFromMolFile(mol_path)
+        return (True, mol)
     if version == "v3":
         options = AllChem.ETKDGv3()
     elif version == "v2":
@@ -147,9 +160,9 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> bool:
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
 
-        return True
-
-    return False
+        return (True, mol)
+    AllChem.MolToMolFile(mol, f"./conformer_cache/{get_mol_id(mol)}.mol")
+    return (False, mol)
 
 
 def get_conformer(mol: Mol) -> Conformer:
@@ -608,7 +621,7 @@ def parse_boltz_schema(  # noqa: C901, PLR0915, PLR0912
             for atom, can_idx in zip(mol.GetAtoms(), canonical_order):
                 atom.SetProp("name", atom.GetSymbol().upper() + str(can_idx + 1))
 
-            success = compute_3d_conformer(mol)
+            success, mol = compute_3d_conformer(mol)
             if not success:
                 msg = f"Failed to compute 3D conformer for {seq}"
                 raise ValueError(msg)
