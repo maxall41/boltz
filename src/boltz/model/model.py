@@ -73,6 +73,8 @@ class Boltz1(LightningModule):
     ) -> None:
         super().__init__()
 
+        self.structure_prediction_training = structure_prediction_training
+
         self.save_hyperparameters()
 
         self.lddt = nn.ModuleDict()
