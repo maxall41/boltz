@@ -1,10 +1,10 @@
 import os
 import pickle
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+import fire
 import hydra
 import omegaconf
 import pytorch_lightning as pl
@@ -19,7 +19,6 @@ from pytorch_lightning.utilities import rank_zero_only
 
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
 from boltz.main import check_inputs, download, process_inputs
-import fire
 
 
 @dataclass
@@ -111,7 +110,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
 
     # Check if data is a directory
     data = check_inputs(data, out_dir, False)
-    processed = process_inputs(data, out_dir, ccd, sample=sample == "true")
+    processed = process_inputs(data, out_dir, ccd, sample=sample)
 
     # Load the configuration
     raw_config = omegaconf.OmegaConf.load(raw_config)

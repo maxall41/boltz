@@ -557,8 +557,7 @@ def get_ligand_symmetries(cropped, symmetries):
         syms_ccd, mol_atom_names_ccd = symmetries[mol_name]
         # Get indices of mol_atom_names_ccd that are in mol_atom_names
         ccd_to_valid_ids = {
-            mol_atom_names_ccd.index(name): i
-            for i, name in enumerate(mol_atom_names)
+            mol_atom_names_ccd.index(name): i for i, name in enumerate(mol_atom_names)
         }
         ccd_valid_ids = set(ccd_to_valid_ids.keys())
 
