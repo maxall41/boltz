@@ -225,20 +225,21 @@ class TrainingDataset(torch.utils.data.Dataset):
             The sampled data features.
 
         """
-        dataset: Record = self.records[idx]
+        record: Record = self.records[idx]
+        dataset = self.datasets[0]
 
         # Get the structure
         try:
-            input_data = load_input(dataset, dataset.target_dir, dataset.msa_dir)
+            input_data = load_input(record, dataset.target_dir, dataset.msa_dir)
         except Exception as e:
-            print(f"Failed to load input for {dataset.id} with error {e}. Skipping.")
+            print(f"Failed to load input for {record.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
         # Tokenize structure
         try:
             tokenized = dataset.tokenizer.tokenize(input_data)
         except Exception as e:
-            print(f"Tokenizer failed on {dataset.id} with error {e}. Skipping.")
+            print(f"Tokenizer failed on {record.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
         # Compute features
@@ -261,7 +262,7 @@ class TrainingDataset(torch.utils.data.Dataset):
                 binder_pocket_sampling_geometric_p=self.binder_pocket_sampling_geometric_p,
             )
         except Exception as e:
-            print(f"Featurizer failed on {dataset.id} with error {e}. Skipping.")
+            print(f"Featurizer failed on {record.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
         return features
