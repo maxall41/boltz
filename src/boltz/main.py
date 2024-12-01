@@ -179,8 +179,6 @@ def process_inputs(
 
     # Parse input data
     records: list[Record] = []
-    if sample:
-        data = data[:100]
     for path in tqdm(data):
         try:
             # Parse data
