@@ -30,6 +30,7 @@ dependencies = [
     "scipy==1.13.1",
     "h5py>=3.12.1",
     "fire>=0.7.0",
+    "pre-commit>=4.0.1",
 ]
 
 [project.scripts]
