@@ -189,7 +189,11 @@ class Boltz1(LightningModule):
             )
         self.pairformer_module = PairformerModule(token_s, token_z, **pairformer_args)
         self.prediction_head = nn.Sequential(
-            nn.Linear(token_s + token_z, 512),
+            nn.Linear(66048, 5012),
+            nn.Mish(),
+            nn.Linear(5012, 1024),
+            nn.Mish(),
+            nn.Linear(1024, 512),
             nn.Mish(),
             nn.Linear(512, 1),
             nn.Sigmoid(),
@@ -270,12 +274,9 @@ class Boltz1(LightningModule):
                         pairformer_module = self.pairformer_module
 
                     s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
-            print(s.shape, z.shape)
             s = torch.mean(s, dim=2)
             z = torch.flatten(torch.mean(z, dim=1), start_dim=1)
-            print(s.shape, z.shape)
             sz = torch.cat((s, z), dim=-1)
-            print(sz.shape)
             out = self.prediction_head(sz)
             return out
 
