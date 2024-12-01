@@ -127,9 +127,9 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
     conformer_dir = Path("./conformer_cache")
     if not Path.exists(conformer_dir):
         Path.mkdir(conformer_dir)
-    mol_path = str(conformer_dir / f"{get_mol_id(mol)}.mol")
+    mol_path: Path = conformer_dir / f"{get_mol_id(mol)}.mol"
     if Path.exists(mol_path):
-        mol = AllChem.MolFromMolFile(mol_path, removeHs=False)
+        mol = AllChem.MolFromMolFile(str(mol_path), removeHs=False)
         conformer = mol.GetConformer(0)
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
@@ -166,7 +166,7 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
         conformer = mol.GetConformer(conf_id)
         conformer.SetProp("name", "Computed")
         conformer.SetProp("coord_generation", f"ETKDG{version}")
-        AllChem.MolToMolFile(mol, mol_path, confId=conf_id)
+        AllChem.MolToMolFile(mol, str(mol_path), confId=conf_id)
         return (True, mol)
     return (False, mol)
 
