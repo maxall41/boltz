@@ -966,8 +966,6 @@ class BoltzFeaturizer:
 
         # Compute symmetry features
         symmetry_features = {}
-        if compute_symmetries:
-            symmetry_features = process_symmetry_features(data, symmetries)
 
         return {
             **token_features,

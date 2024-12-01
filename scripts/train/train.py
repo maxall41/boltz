@@ -88,8 +88,8 @@ def train(raw_config: str, args: list[str]) -> None:  # noqa: C901, PLR0912, PLR
 
     """
     cache_in = "~/.boltz"
-    data_in = "../data/"
-    out_dir_in = "../out_res/"
+    data_in = args[0]
+    out_dir_in = args[1]
 
     # Set cache path
     cache = Path(cache_in).expanduser()

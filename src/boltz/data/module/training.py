@@ -194,7 +194,6 @@ class TrainingDataset(torch.utils.data.Dataset):
         self.datasets = datasets
         self.probs = [d.prob for d in datasets]
         self.samples_per_epoch = samples_per_epoch
-        self.symmetries = symmetries
         self.max_tokens = max_tokens
         self.max_seqs = max_seqs
         self.max_atoms = max_atoms
@@ -208,7 +207,6 @@ class TrainingDataset(torch.utils.data.Dataset):
         self.binder_pocket_conditioned_prop = binder_pocket_conditioned_prop
         self.binder_pocket_cutoff = binder_pocket_cutoff
         self.binder_pocket_sampling_geometric_p = binder_pocket_sampling_geometric_p
-        self.return_symmetries = return_symmetries
         self.records = []
         for dataset in datasets:
             records = dataset.manifest.records
@@ -244,26 +242,6 @@ class TrainingDataset(torch.utils.data.Dataset):
             print(f"Tokenizer failed on {dataset.id} with error {e}. Skipping.")
             return self.__getitem__(idx)
 
-        # # Compute crop
-        # try:
-        #     if self.max_tokens is not None:
-        #         tokenized = dataset.cropper.crop(
-        #             tokenized,
-        #             max_atoms=self.max_atoms,
-        #             max_tokens=self.max_tokens,
-        #             random=np.random,
-        #             chain_id=sample.chain_id,
-        #             interface_id=sample.interface_id,
-        #         )
-        # except Exception as e:
-        #     print(f"Cropper failed on {sample.record.id} with error {e}. Skipping.")
-        #     return self.__getitem__(idx)
-
-        # # Check if there are tokens
-        # if len(tokenized.tokens) == 0:
-        #     msg = "No tokens in cropped structure."
-        #     raise ValueError(msg)
-
         # Compute features
         try:
             features = dataset.featurizer.process(
@@ -273,12 +251,12 @@ class TrainingDataset(torch.utils.data.Dataset):
                 max_tokens=self.max_tokens if self.pad_to_max_tokens else None,
                 max_seqs=self.max_seqs,
                 pad_to_max_seqs=self.pad_to_max_seqs,
-                symmetries=self.symmetries,
+                symmetries=None,
                 atoms_per_window_queries=self.atoms_per_window_queries,
                 min_dist=self.min_dist,
                 max_dist=self.max_dist,
                 num_bins=self.num_bins,
-                compute_symmetries=self.return_symmetries,
+                compute_symmetries=False,
                 binder_pocket_conditioned_prop=self.binder_pocket_conditioned_prop,
                 binder_pocket_cutoff=self.binder_pocket_cutoff,
                 binder_pocket_sampling_geometric_p=self.binder_pocket_sampling_geometric_p,
@@ -332,7 +310,6 @@ class ValidationDataset(torch.utils.data.Dataset):
         self.max_tokens = max_tokens
         self.max_seqs = max_seqs
         self.seed = seed
-        self.symmetries = symmetries
         self.random = np.random if overfit else np.random.RandomState(self.seed)
         self.pad_to_max_tokens = pad_to_max_tokens
         self.pad_to_max_atoms = pad_to_max_atoms
@@ -343,7 +320,6 @@ class ValidationDataset(torch.utils.data.Dataset):
         self.min_dist = min_dist
         self.max_dist = max_dist
         self.num_bins = num_bins
-        self.return_symmetries = return_symmetries
         self.binder_pocket_conditioned_prop = binder_pocket_conditioned_prop
         self.binder_pocket_cutoff = binder_pocket_cutoff
 
@@ -417,12 +393,12 @@ class ValidationDataset(torch.utils.data.Dataset):
                 max_tokens=self.max_tokens if pad_tokens else None,
                 max_seqs=self.max_seqs,
                 pad_to_max_seqs=self.pad_to_max_seqs,
-                symmetries=self.symmetries,
+                symmetries=None,
                 atoms_per_window_queries=self.atoms_per_window_queries,
                 min_dist=self.min_dist,
                 max_dist=self.max_dist,
                 num_bins=self.num_bins,
-                compute_symmetries=self.return_symmetries,
+                compute_symmetries=False,
                 binder_pocket_conditioned_prop=self.binder_pocket_conditioned_prop,
                 binder_pocket_cutoff=self.binder_pocket_cutoff,
                 binder_pocket_sampling_geometric_p=1.0,  # this will only sample a single pocket token
@@ -467,9 +443,6 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
         self.cfg = cfg
 
         assert self.cfg.val_batch_size == 1, "Validation only works with batch size=1."
-
-        # Load symmetries
-        symmetries = get_symmetries(cfg.symmetries)
 
         # Load datasets
         train: list[Dataset] = []
@@ -567,7 +540,7 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
             pad_to_max_atoms=cfg.pad_to_max_atoms,
             pad_to_max_tokens=cfg.pad_to_max_tokens,
             pad_to_max_seqs=cfg.pad_to_max_seqs,
-            symmetries=symmetries,
+            symmetries=None,
             atoms_per_window_queries=cfg.atoms_per_window_queries,
             min_dist=cfg.min_dist,
             max_dist=cfg.max_dist,
@@ -576,7 +549,7 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
             binder_pocket_conditioned_prop=cfg.train_binder_pocket_conditioned_prop,
             binder_pocket_cutoff=cfg.binder_pocket_cutoff,
             binder_pocket_sampling_geometric_p=cfg.binder_pocket_sampling_geometric_p,
-            return_symmetries=cfg.return_train_symmetries,
+            return_symmetries=False,
         )
         self._val_set = ValidationDataset(
             datasets=train if cfg.overfit is not None else val,
@@ -587,14 +560,14 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
             pad_to_max_atoms=cfg.pad_to_max_atoms,
             pad_to_max_tokens=cfg.pad_to_max_tokens,
             pad_to_max_seqs=cfg.pad_to_max_seqs,
-            symmetries=symmetries,
+            symmetries=None,
             atoms_per_window_queries=cfg.atoms_per_window_queries,
             min_dist=cfg.min_dist,
             max_dist=cfg.max_dist,
             num_bins=cfg.num_bins,
             overfit=cfg.overfit,
             crop_validation=cfg.crop_validation,
-            return_symmetries=cfg.return_val_symmetries,
+            return_symmetries=False,
             binder_pocket_conditioned_prop=cfg.val_binder_pocket_conditioned_prop,
             binder_pocket_cutoff=cfg.binder_pocket_cutoff,
         )
