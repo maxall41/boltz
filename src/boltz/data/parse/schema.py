@@ -129,7 +129,8 @@ def compute_3d_conformer(mol: Mol, version: str = "v3") -> tuple[bool, Mol]:
     mol_path = f"{conformer_dir}/{get_mol_id(mol)}.mol"
     if os.path.exists(mol_path):
         print("Loading mol", mol_path)
-        mol = AllChem.MolFromMolFile(mol_path)
+        mol = AllChem.MolFromMolFile(mol_path, removeHs=False)
+        print("conf num ", mol.GetNumConformers())
         return (True, mol)
     if version == "v3":
         options = AllChem.ETKDGv3()
