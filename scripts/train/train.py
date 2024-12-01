@@ -14,7 +14,7 @@ from omegaconf import OmegaConf, listconfig
 from pytorch_lightning import LightningModule
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.strategies import DDPStrategy
+from pytorch_lightning.strategies import FSDPStrategy
 from pytorch_lightning.utilities import rank_zero_only
 
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
@@ -192,7 +192,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     if (isinstance(devices, int) and devices > 1) or (
         isinstance(devices, (list, listconfig.ListConfig)) and len(devices) > 1
     ):
-        strategy = DDPStrategy(find_unused_parameters=cfg.find_unused_parameters)
+        strategy = FSDPStrategy()
 
     trainer = pl.Trainer(
         default_root_dir=str(dirpath),
