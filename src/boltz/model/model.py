@@ -272,7 +272,7 @@ class Boltz1(LightningModule):
                     s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
             print(s.shape, z.shape)
             s = torch.mean(s, dim=2)
-            z = torch.mean(z, dim=1).flatten()
+            z = torch.flatten(torch.mean(z, dim=1), start_dim=1)
             print(s.shape, z.shape)
             sz = torch.cat((s, z))
             print(sz.shape)
