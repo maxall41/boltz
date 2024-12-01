@@ -791,6 +791,6 @@ def parse_boltz_schema(  # noqa: C901, PLR0915, PLR0912
         structure=struct_info,
         chains=chain_infos,
         interfaces=[],
-        label=schema["label"],
+        label=schema["label"] == 1.0,
     )
     return Target(record=record, structure=data)
