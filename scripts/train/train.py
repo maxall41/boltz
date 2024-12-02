@@ -188,17 +188,9 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
 
         save_config_to_wandb()
 
-    # Set up trainer
-    strategy = "auto"
-    if (isinstance(devices, int) and devices > 1) or (
-        isinstance(devices, (list, listconfig.ListConfig)) and len(devices) > 1
-    ):
-        strategy = FSDPStrategy(cpu_offload=CPUOffload(True))
-        print("Enabled FSDP with cpu offload!")
-
     trainer = pl.Trainer(
         default_root_dir=str(dirpath),
-        strategy=strategy,
+        strategy="deepspeed_stage_2_offload",
         callbacks=callbacks,
         logger=loggers,
         enable_checkpointing=not cfg.disable_checkpoint,
