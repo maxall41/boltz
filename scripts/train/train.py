@@ -205,6 +205,8 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         **trainer,
     )
 
+    model_module = torch.compile(model_module)
+
     if not cfg.strict_loading:
         model_module.strict_loading = False
 
