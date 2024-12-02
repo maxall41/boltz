@@ -294,8 +294,8 @@ class Boltz1(LightningModule):
         label = torch.tensor(batch["label"], device=out.device).unsqueeze(dim=0)
         # print(out, label)
         loss = F.binary_cross_entropy_with_logits(out, label)
-        loss = loss.cpu().item()
-        self.log("train/loss", loss)
+        loss_item = loss.cpu().item()
+        self.log("train/loss", loss_item)
         self.training_log()
         return loss
 
