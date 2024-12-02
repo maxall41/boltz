@@ -19,6 +19,7 @@ from pytorch_lightning.utilities import rank_zero_only
 
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
 from boltz.main import check_inputs, download, process_inputs
+from torch.distributed.fsdp import CPUOffload
 
 
 @dataclass
@@ -192,7 +193,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     if (isinstance(devices, int) and devices > 1) or (
         isinstance(devices, (list, listconfig.ListConfig)) and len(devices) > 1
     ):
-        strategy = FSDPStrategy(cpu_offload=True)
+        strategy = FSDPStrategy(cpu_offload=CPUOffload(True))
         print("Enabled FSDP with cpu offload!")
 
     trainer = pl.Trainer(
