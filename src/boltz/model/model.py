@@ -32,6 +32,7 @@ from boltz.model.modules.trunk import (
 )
 from boltz.model.modules.utils import ExponentialMovingAverage
 from boltz.model.optim.scheduler import AlphaFoldLRScheduler
+from deepspeed.ops.adam import DeepSpeedCPUAdam
 
 
 class Boltz1(LightningModule):
@@ -386,7 +387,7 @@ class Boltz1(LightningModule):
                 p for p in self.confidence_module.parameters() if p.requires_grad
             ]
 
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.DeepSpeedCPUAdam(
             parameters,
             betas=(self.training_args.adam_beta_1, self.training_args.adam_beta_2),
             eps=self.training_args.adam_eps,
