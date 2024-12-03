@@ -387,7 +387,7 @@ class Boltz1(LightningModule):
                 p for p in self.confidence_module.parameters() if p.requires_grad
             ]
 
-        optimizer = torch.optim.DeepSpeedCPUAdam(
+        optimizer = DeepSpeedCPUAdam(
             parameters,
             betas=(self.training_args.adam_beta_1, self.training_args.adam_beta_2),
             eps=self.training_args.adam_eps,
