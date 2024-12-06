@@ -202,7 +202,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         model_module.strict_loading = False
 
     if cfg.resume is not None:
-        checkpoint = torch.load(cfg.resume)
+        checkpoint = torch.load(cfg.resume,map_location=torch.device('cpu'))
         model_module.load_state_dict(
             checkpoint["state_dict"], strict=cfg.strict_loading
         )
