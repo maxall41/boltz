@@ -1,9 +1,9 @@
-import os
 import pickle
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-import random
+
 import fire
 import hydra
 import omegaconf
@@ -11,15 +11,14 @@ import pytorch_lightning as pl
 import torch
 import torch.multiprocessing
 from omegaconf import OmegaConf, listconfig
+from peft import LoraConfig, TaskType, get_peft_model
 from pytorch_lightning import LightningModule
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.strategies import FSDPStrategy
 from pytorch_lightning.utilities import rank_zero_only
 
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
 from boltz.main import check_inputs, download, process_inputs
-from torch.distributed.fsdp import CPUOffload
 
 
 @dataclass
@@ -167,6 +166,16 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         )
         callbacks = [mc]
 
+    peft_config = LoraConfig(
+        task_type=TaskType.SEQ_CLS,
+        inference_mode=False,
+        r=8,
+        lora_alpha=32,
+        lora_dropout=0.1,
+    )
+
+    model_module = get_peft_model(model_module, peft_config)
+
     # Create wandb logger
     loggers = []
     if wandb:
@@ -202,7 +211,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         model_module.strict_loading = False
 
     if cfg.resume is not None:
-        checkpoint = torch.load(cfg.resume,map_location=torch.device('cpu'))
+        checkpoint = torch.load(cfg.resume, map_location=torch.device("cpu"))
         model_module.load_state_dict(
             checkpoint["state_dict"], strict=cfg.strict_loading
         )

@@ -20,7 +20,7 @@ dependencies = [
     "types-requests",
     "einops==0.8.0",
     "einx==0.3.0",
-#    "fairscale==0.4.13",
+    #    "fairscale==0.4.13",
     "mashumaro==3.14",
     "modelcif==1.2",
     "wandb==0.18.7",
@@ -31,7 +31,8 @@ dependencies = [
     "h5py>=3.12.1",
     "fire>=0.7.0",
     "pre-commit>=4.0.1",
-   # "pytorch-lightning>=2.4.0",
+    # "pytorch-lightning>=2.4.0",
+    "peft>=0.14.0",
 ]
 
 [project.scripts]
