@@ -32,8 +32,58 @@ from boltz.model.modules.trunk import (
 )
 from boltz.model.modules.utils import ExponentialMovingAverage
 from boltz.model.optim.scheduler import AlphaFoldLRScheduler
-from deepspeed.ops.adam import DeepSpeedCPUAdam
+from einops import rearrange, reduce, repeat
 
+
+class LearnableProjection(nn.Module):
+    def __init__(self, input_dim1, input_dim2, target_seq_len=512, hidden_dim=4096):
+        super().__init__()
+
+        # Learnable positional embeddings for the fixed-size representation
+        self.pos_embedding = nn.Parameter(torch.randn(1, target_seq_len, hidden_dim))
+
+        # Projection layers for both tensors
+        self.proj1 = nn.Linear(input_dim1, hidden_dim)
+        self.proj2 = nn.Linear(input_dim2, hidden_dim)
+
+        # Cross-attention layers to learn relationships
+        self.attention = nn.MultiheadAttention(hidden_dim, num_heads=8)
+        self.norm = nn.LayerNorm(hidden_dim)
+
+        self.target_seq_len = target_seq_len
+        self.hidden_dim = hidden_dim
+
+    def forward(self, tensor1, tensor2):
+        # tensor1: [batch, seq_len, seq_len, dim1] (z tensor)
+        # tensor2: [batch, seq_len, dim2] (s tensor)
+
+        # Project first tensor (z)
+        batch, seq_len, _, dim1 = tensor1.shape
+        x1 = rearrange(tensor1, 'b s1 s2 d -> b (s1 s2) d')
+        x1 = self.proj1(x1)  # [batch, seq_len*seq_len, hidden_dim]
+
+        # Project second tensor (s)
+        x2 = self.proj2(tensor2)  # [batch, seq_len, hidden_dim]
+
+        # Combine the representations
+        x = torch.cat([x1, x2], dim=1)  # [batch, seq_len*seq_len + seq_len, hidden_dim]
+
+        # Use attention to map to fixed length
+        query = repeat(self.pos_embedding, '1 l d -> b l d', b=batch)
+        key = value = x
+
+        # Cross attention between learned positions and input
+        attn_output, _ = self.attention(
+            query.transpose(0, 1),
+            key.transpose(0, 1),
+            value.transpose(0, 1)
+        )
+        attn_output = attn_output.transpose(0, 1)
+
+        # Final normalization
+        output = self.norm(attn_output)
+
+        return output  # [batch, target_seq_len, hidden_dim]
 
 class Boltz1(LightningModule):
     def __init__(  # noqa: PLR0915, C901
@@ -59,7 +109,7 @@ class Boltz1(LightningModule):
         structure_prediction_training: bool = True,
         atoms_per_window_queries: int = 32,
         atoms_per_window_keys: int = 128,
-        compile_pairformer: bool = False,
+        compile_pairformer: bool = True,
         compile_structure: bool = False,
         compile_confidence: bool = False,
         nucleotide_rmsd_weight: float = 5.0,
@@ -190,13 +240,18 @@ class Boltz1(LightningModule):
             )
         self.pairformer_module = PairformerModule(token_s, token_z, **pairformer_args)
         self.prediction_head = nn.Sequential(
-            nn.Linear(66048, 5012),
+            nn.Linear(4096, 4096),
             nn.Mish(),
-            nn.Linear(5012, 1024),
+            nn.Linear(4096, 1024),
             nn.Mish(),
             nn.Linear(1024, 512),
             nn.Mish(),
             nn.Linear(512, 1),
+        )
+        self.pooler = LearnableProjection(
+            input_dim1=128,
+            input_dim2=384,
+            target_seq_len=512, hidden_dim=4096
         )
 
         if compile_pairformer:
@@ -274,9 +329,10 @@ class Boltz1(LightningModule):
                         pairformer_module = self.pairformer_module
 
                     s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
-            s = torch.mean(s, dim=2)
-            z = torch.flatten(torch.mean(z, dim=1), start_dim=1)
-            sz = torch.cat((s, z), dim=-1)
+            print(s.shape,z.shape)
+            sz = self.pooler(z,s)
+            sz = torch.mean(sz,dim=1)
+            print("SZ",sz.shape)
             out = self.prediction_head(sz)
             return out
 
@@ -292,8 +348,9 @@ class Boltz1(LightningModule):
             multiplicity_diffusion_train=-1,
             diffusion_samples=-1,
         )
-        label = torch.tensor(batch["label"], device=out.device).unsqueeze(dim=0)
-        # print(out, label)
+        out = out.flatten()
+        label = torch.tensor(batch["label"], device=out.device)
+        print(F.sigmoid(out), label)
         loss = F.binary_cross_entropy_with_logits(out, label)
         loss_item = torch.clone(loss).cpu().item()
         print("loss", loss)
@@ -387,7 +444,7 @@ class Boltz1(LightningModule):
                 p for p in self.confidence_module.parameters() if p.requires_grad
             ]
 
-        optimizer = DeepSpeedCPUAdam(
+        optimizer = torch.optim.Adam(
             parameters,
             betas=(self.training_args.adam_beta_1, self.training_args.adam_beta_2),
             eps=self.training_args.adam_eps,

@@ -3,7 +3,7 @@ import pickle
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-
+import random
 import fire
 import hydra
 import omegaconf
@@ -111,6 +111,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
 
     # Check if data is a directory
     data = check_inputs(data, out_dir, False)
+    random.shuffle(data)
     processed = process_inputs(data, out_dir, ccd, sample=sample)
 
     # Load the configuration
@@ -190,7 +191,6 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
 
     trainer = pl.Trainer(
         default_root_dir=str(dirpath),
-        strategy="deepspeed_stage_2_offload",
         callbacks=callbacks,
         logger=loggers,
         enable_checkpointing=not cfg.disable_checkpoint,
