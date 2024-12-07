@@ -553,6 +553,7 @@ def generate_embeddings(
             if mean:
                 sinlge_emb = torch.mean(sinlge_emb, dim=-1)
                 pair_emb = torch.mean(pair_emb, dim=-1)
+            print(sinlge_emb.shape,pair_emb.shape)
             h5f.create_dataset(
                 f"{batch['record'][0].id}_data_single_emb", data=sinlge_emb.cpu()
             )
