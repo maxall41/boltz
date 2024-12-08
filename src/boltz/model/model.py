@@ -14,6 +14,7 @@ from boltz.data.feature.symmetry import (
     minimum_lddt_symmetry_coords,
     minimum_symmetry_coords,
 )
+import wandb
 from boltz.model.loss.confidence import confidence_loss
 from boltz.model.loss.distogram import distogram_loss
 from boltz.model.loss.validation import (
@@ -59,7 +60,7 @@ class LearnableProjection(nn.Module):
 
         # Project first tensor (z)
         batch, seq_len, _, dim1 = tensor1.shape
-        x1 = rearrange(tensor1, 'b s1 s2 d -> b (s1 s2) d')
+        x1 = rearrange(tensor1, "b s1 s2 d -> b (s1 s2) d")
         x1 = self.proj1(x1)  # [batch, seq_len*seq_len, hidden_dim]
 
         # Project second tensor (s)
@@ -69,14 +70,12 @@ class LearnableProjection(nn.Module):
         x = torch.cat([x1, x2], dim=1)  # [batch, seq_len*seq_len + seq_len, hidden_dim]
 
         # Use attention to map to fixed length
-        query = repeat(self.pos_embedding, '1 l d -> b l d', b=batch)
+        query = repeat(self.pos_embedding, "1 l d -> b l d", b=batch)
         key = value = x
 
         # Cross attention between learned positions and input
         attn_output, _ = self.attention(
-            query.transpose(0, 1),
-            key.transpose(0, 1),
-            value.transpose(0, 1)
+            query.transpose(0, 1), key.transpose(0, 1), value.transpose(0, 1)
         )
         attn_output = attn_output.transpose(0, 1)
 
@@ -84,6 +83,7 @@ class LearnableProjection(nn.Module):
         output = self.norm(attn_output)
 
         return output  # [batch, target_seq_len, hidden_dim]
+
 
 class Boltz1(LightningModule):
     def __init__(  # noqa: PLR0915, C901
@@ -249,9 +249,7 @@ class Boltz1(LightningModule):
             nn.Linear(512, 1),
         )
         self.pooler = LearnableProjection(
-            input_dim1=128,
-            input_dim2=384,
-            target_seq_len=512, hidden_dim=4096
+            input_dim1=128, input_dim2=384, target_seq_len=512, hidden_dim=4096
         )
 
         if compile_pairformer:
@@ -329,10 +327,10 @@ class Boltz1(LightningModule):
                         pairformer_module = self.pairformer_module
 
                     s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
-            print(s.shape,z.shape)
-            sz = self.pooler(z,s)
-            sz = torch.mean(sz,dim=1)
-            print("SZ",sz.shape)
+            print(s.shape, z.shape)
+            sz = self.pooler(z, s)
+            sz = torch.mean(sz, dim=1)
+            print("SZ", sz.shape)
             out = self.prediction_head(sz)
             return out
 
@@ -350,42 +348,21 @@ class Boltz1(LightningModule):
         )
         out = out.flatten()
         label = torch.tensor(batch["label"], device=out.device)
-        print(F.sigmoid(out), label)
         loss = F.binary_cross_entropy_with_logits(out, label)
         loss_item = torch.clone(loss).cpu().item()
-        print("loss", loss)
-        print("loss item", loss_item)
-        self.log("train/loss", loss_item)
+        wandb.log({"train/loss": loss_item})
         self.training_log()
         return loss
 
     def training_log(self):
-        self.log("train/grad_norm", self.gradient_norm(self), prog_bar=False)
-        self.log("train/param_norm", self.parameter_norm(self), prog_bar=False)
+        wandb.log("train/grad_norm", self.gradient_norm(self), prog_bar=False)
+        wandb.log("train/param_norm", self.parameter_norm(self), prog_bar=False)
 
         lr = self.trainer.optimizers[0].param_groups[0]["lr"]
-        self.log("lr", lr, prog_bar=False)
-
-        self.log(
-            "train/grad_norm_msa_module",
-            self.gradient_norm(self.msa_module),
-            prog_bar=False,
-        )
-        self.log(
-            "train/param_norm_msa_module",
-            self.parameter_norm(self.msa_module),
-            prog_bar=False,
-        )
-
-        self.log(
-            "train/grad_norm_pairformer_module",
-            self.gradient_norm(self.pairformer_module),
-            prog_bar=False,
-        )
-        self.log(
-            "train/param_norm_pairformer_module",
-            self.parameter_norm(self.pairformer_module),
-            prog_bar=False,
+        wandb.log(
+            {
+                "lr": lr,
+            }
         )
 
     def gradient_norm(self, module) -> float:
@@ -415,6 +392,7 @@ class Boltz1(LightningModule):
         )
 
         loss = F.binary_cross_entropy(out, batch["label"])
+        self.log("val/loss", loss.item(), on_epoch=True)
         return loss
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:
@@ -464,10 +442,6 @@ class Boltz1(LightningModule):
 
         return optimizer
 
-    def on_save_checkpoint(self, checkpoint: dict[str, Any]) -> None:
-        if self.use_ema:
-            checkpoint["ema"] = self.ema.state_dict()
-
     def on_load_checkpoint(self, checkpoint: dict[str, Any]) -> None:
         if self.use_ema and self.ema is None:
             self.ema = ExponentialMovingAverage(
@@ -482,32 +456,38 @@ class Boltz1(LightningModule):
             self.load_state_dict(checkpoint["ema"]["shadow_params"], strict=False)
 
     def on_train_start(self):
-        if self.use_ema and self.ema is None:
-            self.ema = ExponentialMovingAverage(
-                parameters=self.parameters(), decay=self.ema_decay
-            )
-        elif self.use_ema:
-            self.ema.to(self.device)
+        pass
+        # if self.use_ema and self.ema is None:
+        #     self.ema = ExponentialMovingAverage(
+        #         parameters=self.parameters(), decay=self.ema_decay
+        #     )
+        # elif self.use_ema:
+        #     self.ema.to(self.device)
 
     def on_train_epoch_start(self) -> None:
-        if self.use_ema:
-            self.ema.restore(self.parameters())
+        pass
+        # if self.use_ema:
+        #     self.ema.restore(self.parameters())
 
     def prepare_eval(self) -> None:
-        if self.use_ema and self.ema is None:
-            self.ema = ExponentialMovingAverage(
-                parameters=self.parameters(), decay=self.ema_decay
-            )
+        pass
+        # if self.use_ema and self.ema is None:
+        #     self.ema = ExponentialMovingAverage(
+        #         parameters=self.parameters(), decay=self.ema_decay
+        #     )
 
-        if self.use_ema:
-            self.ema.store(self.parameters())
-            self.ema.copy_to(self.parameters())
+        # if self.use_ema:
+        #     self.ema.store(self.parameters())
+        #     self.ema.copy_to(self.parameters())
 
     def on_validation_start(self):
-        self.prepare_eval()
+        # self.prepare_eval()
+        pass
 
     def on_predict_start(self) -> None:
-        self.prepare_eval()
+        # self.prepare_eval()
+        pass
 
     def on_test_start(self) -> None:
-        self.prepare_eval()
+        # self.prepare_eval()
+        pass

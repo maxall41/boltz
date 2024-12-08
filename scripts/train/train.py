@@ -166,15 +166,15 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         )
         callbacks = [mc]
 
-    peft_config = LoraConfig(
-        task_type=TaskType.SEQ_CLS,
-        inference_mode=False,
-        r=8,
-        lora_alpha=32,
-        lora_dropout=0.1,
-    )
+   # peft_config = LoraConfig(
+   #     task_type=TaskType.SEQ_CLS,
+   #     inference_mode=False,
+   #     r=8,
+   #     lora_alpha=32,
+   #     lora_dropout=0.1,
+   # )
 
-    model_module = get_peft_model(model_module, peft_config)
+    #model_module = get_peft_model(model_module, peft_config)
 
     # Create wandb logger
     loggers = []
@@ -184,7 +184,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
             save_dir=cfg.output,
             project=wandb["project"],
             entity=wandb["entity"],
-            log_model=False,
+            log_model=True,
         )
         loggers.append(wdb_logger)
         # Save the config to wandb
