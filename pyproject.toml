@@ -35,6 +35,7 @@ dependencies = [
     "peft>=0.14.0",
     "neptune>=1.13.0",
     "lightning>=2.4.0",
+    "gpustat>=1.1.1",
 ]
 
 [project.scripts]

@@ -350,7 +350,9 @@ class Boltz1(LightningModule):
         label = torch.tensor(batch["label"], device=out.device)
         loss = F.binary_cross_entropy_with_logits(out, label)
         loss_item = torch.clone(loss).cpu().item()
-        self.logger.experiment["train/loss"].append(loss_item)
+        self.log("train/loss", loss_item,on_step=True,sync_dist=True,prog_bar=True)
+        lr = self.trainer.optimizers[0].param_groups[0]["lr"]
+        self.log("train/lr", lr, prog_bar=False)
         return loss
 
     def gradient_norm(self, module) -> float:
@@ -431,17 +433,18 @@ class Boltz1(LightningModule):
         return optimizer
 
     def on_load_checkpoint(self, checkpoint: dict[str, Any]) -> None:
-        if self.use_ema and self.ema is None:
-            self.ema = ExponentialMovingAverage(
-                parameters=self.parameters(), decay=self.ema_decay
-            )
-        if self.use_ema:
-            if self.ema.compatible(checkpoint["ema"]["shadow_params"]):
-                self.ema.load_state_dict(checkpoint["ema"], device=torch.device("cpu"))
-            else:
-                print("EMA not compatible with checkpoint, skipping...")
-        elif "ema" in checkpoint:
-            self.load_state_dict(checkpoint["ema"]["shadow_params"], strict=False)
+        self.load_state_dict(checkpoint["ema"], strict=False)
+        # if self.use_ema and self.ema is None:
+        #     self.ema = ExponentialMovingAverage(
+        #         parameters=self.parameters(), decay=self.ema_decay
+        #     )
+        # if self.use_ema:
+        #     if self.ema.compatible(checkpoint["ema"]["shadow_params"]):
+        #         self.ema.load_state_dict(checkpoint["ema"], device=torch.device("cpu"))
+        #     else:
+        #         print("EMA not compatible with checkpoint, skipping...")
+        # elif "ema" in checkpoint:
+        #     self.load_state_dict(checkpoint["ema"]["shadow_params"], strict=False)
 
     def on_train_start(self):
         pass
