@@ -166,42 +166,19 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         )
         callbacks = [mc]
 
-   # peft_config = LoraConfig(
-   #     task_type=TaskType.SEQ_CLS,
-   #     inference_mode=False,
-   #     r=8,
-   #     lora_alpha=32,
-   #     lora_dropout=0.1,
-   # )
-
-    #model_module = get_peft_model(model_module, peft_config)
-
     # Create wandb logger
-    loggers = []
-    if wandb:
-        wdb_logger = WandbLogger(
-            group=wandb["name"],
-            save_dir=cfg.output,
-            project=wandb["project"],
-            entity=wandb["entity"],
-            log_model=True,
-        )
-        loggers.append(wdb_logger)
-        # Save the config to wandb
-
-        @rank_zero_only
-        def save_config_to_wandb() -> None:
-            config_out = Path(wdb_logger.experiment.dir) / "run.yaml"
-            with Path.open(config_out, "w") as f:
-                OmegaConf.save(raw_config, f)
-            wdb_logger.experiment.save(str(config_out))
-
-        save_config_to_wandb()
+    wdb_logger = WandbLogger(
+        group=cfg.wandb["name"],
+        save_dir=cfg.output,
+        project=cfg.wandb["project"],
+        entity=cfg.wandb["entity"],
+        log_model=True,
+    )
 
     trainer = pl.Trainer(
         default_root_dir=str(dirpath),
         callbacks=callbacks,
-        logger=loggers,
+        logger=wdb_logger,
         enable_checkpointing=not cfg.disable_checkpoint,
         reload_dataloaders_every_n_epochs=1,
         **trainer,

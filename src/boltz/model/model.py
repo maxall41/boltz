@@ -14,7 +14,6 @@ from boltz.data.feature.symmetry import (
     minimum_lddt_symmetry_coords,
     minimum_symmetry_coords,
 )
-import wandb
 from boltz.model.loss.confidence import confidence_loss
 from boltz.model.loss.distogram import distogram_loss
 from boltz.model.loss.validation import (
@@ -350,20 +349,16 @@ class Boltz1(LightningModule):
         label = torch.tensor(batch["label"], device=out.device)
         loss = F.binary_cross_entropy_with_logits(out, label)
         loss_item = torch.clone(loss).cpu().item()
-        wandb.log({"train/loss": loss_item})
+        self.log("train/loss", loss_item)
         self.training_log()
         return loss
 
     def training_log(self):
-        wandb.log("train/grad_norm", self.gradient_norm(self), prog_bar=False)
-        wandb.log("train/param_norm", self.parameter_norm(self), prog_bar=False)
+        self.log("train/grad_norm", self.gradient_norm(self), prog_bar=False)
+        self.log("train/param_norm", self.parameter_norm(self), prog_bar=False)
 
         lr = self.trainer.optimizers[0].param_groups[0]["lr"]
-        wandb.log(
-            {
-                "lr": lr,
-            }
-        )
+        self.log("lr", lr)
 
     def gradient_norm(self, module) -> float:
         # Only compute over parameters that are being trained
