@@ -349,16 +349,8 @@ class Boltz1(LightningModule):
         label = torch.tensor(batch["label"], device=out.device)
         loss = F.binary_cross_entropy_with_logits(out, label)
         loss_item = torch.clone(loss).cpu().item()
-        self.log("train/loss", loss_item)
-        self.training_log()
+        self.log("train/loss", loss_item,on_step=True)
         return loss
-
-    def training_log(self):
-        self.log("train/grad_norm", self.gradient_norm(self), prog_bar=False)
-        self.log("train/param_norm", self.parameter_norm(self), prog_bar=False)
-
-        lr = self.trainer.optimizers[0].param_groups[0]["lr"]
-        self.log("lr", lr)
 
     def gradient_norm(self, module) -> float:
         # Only compute over parameters that are being trained

@@ -111,7 +111,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     # Check if data is a directory
     data = check_inputs(data, out_dir, False)
     random.shuffle(data)
-    processed = process_inputs(data, out_dir, ccd, sample=sample)
+    processed = process_inputs(data, out_dir, ccd, sample=False)
 
     # Load the configuration
     raw_config = omegaconf.OmegaConf.load(raw_config)
@@ -168,11 +168,8 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
 
     # Create wandb logger
     wdb_logger = WandbLogger(
-        group=cfg.wandb["name"],
-        save_dir=cfg.output,
         project=cfg.wandb["project"],
-        entity=cfg.wandb["entity"],
-        log_model=True,
+        log_model="all",
     )
 
     trainer = pl.Trainer(
