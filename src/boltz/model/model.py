@@ -121,7 +121,10 @@ class Boltz1(LightningModule):
         max_dist: float = 22.0,
         predict_args: Optional[dict[str, Any]] = None,
     ) -> None:
+        no_atom_encoder = True
+
         super().__init__()
+
 
         self.structure_prediction_training = structure_prediction_training
 
@@ -326,10 +329,8 @@ class Boltz1(LightningModule):
                         pairformer_module = self.pairformer_module
 
                     s, z = pairformer_module(s, z, mask=mask, pair_mask=pair_mask)
-            print(s.shape, z.shape)
             sz = self.pooler(z, s)
             sz = torch.mean(sz, dim=1)
-            print("SZ", sz.shape)
             out = self.prediction_head(sz)
             return out
 
@@ -349,7 +350,7 @@ class Boltz1(LightningModule):
         label = torch.tensor(batch["label"], device=out.device)
         loss = F.binary_cross_entropy_with_logits(out, label)
         loss_item = torch.clone(loss).cpu().item()
-        self.log("train/loss", loss_item,on_step=True)
+        self.logger.experiment["train/loss"].append(loss_item)
         return loss
 
     def gradient_norm(self, module) -> float:
@@ -379,7 +380,7 @@ class Boltz1(LightningModule):
         )
 
         loss = F.binary_cross_entropy(out, batch["label"])
-        self.log("val/loss", loss.item(), on_epoch=True)
+        self.log("val/loss", loss.item(), on_epoch=True,sync_dist=True,prog_bar=True)
         return loss
 
     def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> Any:

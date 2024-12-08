@@ -14,7 +14,7 @@ from omegaconf import OmegaConf, listconfig
 from peft import LoraConfig, TaskType, get_peft_model
 from pytorch_lightning import LightningModule
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-from pytorch_lightning.loggers import WandbLogger
+from lightning.pytorch.loggers import NeptuneLogger
 from pytorch_lightning.utilities import rank_zero_only
 
 from boltz.data.module.training import BoltzTrainingDataModule, DataConfig
@@ -111,7 +111,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     # Check if data is a directory
     data = check_inputs(data, out_dir, False)
     random.shuffle(data)
-    processed = process_inputs(data, out_dir, ccd, sample=False)
+    processed = process_inputs(data, out_dir, ccd, sample=True)
 
     # Load the configuration
     raw_config = omegaconf.OmegaConf.load(raw_config)
@@ -131,17 +131,6 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
 
     # Flip some arguments in debug mode
     devices = trainer.get("devices", 1)
-
-    wandb = cfg.wandb
-    if cfg.debug:
-        if isinstance(devices, int):
-            devices = 1
-        elif isinstance(devices, (list, listconfig.ListConfig)):
-            devices = [devices[0]]
-        trainer["devices"] = devices
-        cfg.data.num_workers = 0
-        if wandb:
-            wandb = None
 
     # Create objects
     data_config = DataConfig(**cfg.data)
@@ -167,15 +156,13 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
         callbacks = [mc]
 
     # Create wandb logger
-    wdb_logger = WandbLogger(
-        project=cfg.wandb["project"],
-        log_model="all",
-    )
+    neptune_logger = NeptuneLogger()
+
 
     trainer = pl.Trainer(
         default_root_dir=str(dirpath),
         callbacks=callbacks,
-        logger=wdb_logger,
+        logger=neptune_logger,
         enable_checkpointing=not cfg.disable_checkpoint,
         reload_dataloaders_every_n_epochs=1,
         **trainer,
