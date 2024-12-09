@@ -108,11 +108,6 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     with ccd_path.open("rb") as file:
         ccd = pickle.load(file)  # noqa: S301
 
-    # Check if data is a directory
-    data = check_inputs(data, out_dir, False)
-    random.shuffle(data)
-    processed = process_inputs(data, out_dir, ccd, sample=True)
-
     # Load the configuration
     raw_config = omegaconf.OmegaConf.load(raw_config)
 
@@ -132,14 +127,8 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     # Flip some arguments in debug mode
     devices = trainer.get("devices", 1)
 
-    # Create objects
-    data_config = DataConfig(**cfg.data)
-    data_config.datasets[0].target_dir = processed.targets_dir
-    data_config.datasets[0].msa_dir = processed.msa_dir
-    data_config.datasets[0].manifest_path = processed.manifest
-    if len(data_config.datasets) > 1:
-        raise Exception("More than one dataset!")
-    data_module = BoltzTrainingDataModule(data_config)
+
+    data_module = BoltzTrainingDataModule(data,ccd,out_dir,cfg)
     model_module = cfg.model
 
     # Create checkpoint callback
@@ -147,7 +136,7 @@ def train(raw_config: str, data_dir: str, out_dir: str, sample: bool) -> None:  
     dirpath = cfg.output
     if not cfg.disable_checkpoint:
         mc = ModelCheckpoint(
-            monitor="val/lddt",
+            monitor="train/loss",
             save_top_k=cfg.save_top_k,
             save_last=True,
             mode="max",

@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader
-
+from boltz.main import check_inputs, download, process_inputs
 from boltz.data.crop.cropper import Cropper
 from boltz.data.feature.featurizer import BoltzFeaturizer
 from boltz.data.feature.pad import pad_to_max
@@ -408,11 +408,12 @@ class ValidationDataset(torch.utils.data.Dataset):
         """
         return len(self.records)
 
+import random
 
 class BoltzTrainingDataModule(pl.LightningDataModule):
     """DataModule for boltz."""
 
-    def __init__(self, cfg: DataConfig) -> None:
+    def __init__(self, data, ccd, out_dir, cfg) -> None:
         """Initialize the DataModule.
 
         Parameters
@@ -422,7 +423,21 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
 
         """
         super().__init__()
-        self.cfg = cfg
+
+        # Check if data is a directory
+        data = check_inputs(data, out_dir, False)
+        random.shuffle(data)
+        processed = process_inputs(data, out_dir, ccd, sample=False)
+
+        # Create objects
+        data_config = DataConfig(**cfg.data)
+        data_config.datasets[0].target_dir = processed.targets_dir
+        data_config.datasets[0].msa_dir = processed.msa_dir
+        data_config.datasets[0].manifest_path = processed.manifest
+        if len(data_config.datasets) > 1:
+            raise Exception("More than one dataset!")
+
+        self.cfg = data_config
 
         assert self.cfg.val_batch_size == 1, "Validation only works with batch size=1."
 
