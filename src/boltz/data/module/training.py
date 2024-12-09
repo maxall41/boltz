@@ -437,6 +437,7 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
         if len(data_config.datasets) > 1:
             raise Exception("More than one dataset!")
 
+        cfg = data_config
         self.cfg = data_config
 
         assert self.cfg.val_batch_size == 1, "Validation only works with batch size=1."
@@ -445,7 +446,7 @@ class BoltzTrainingDataModule(pl.LightningDataModule):
         train: list[Dataset] = []
         val: list[Dataset] = []
 
-        for data_config in cfg.datasets:
+        for data_config in self.cfg.datasets:
             # Set target_dir
             target_dir = Path(data_config.target_dir)
             msa_dir = Path(data_config.msa_dir)
