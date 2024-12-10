@@ -174,11 +174,11 @@ def process_inputs(
     records: list[Record] = []
     for path in tqdm(data):
         # Parse data
-        if path.suffix == ".fasta":
-            target = parse_fasta(path, ccd)
-        elif path.suffix == ".yaml":
+        try:
             target = parse_yaml(path, ccd)
-
+        except:
+            print("failed",path)
+            continue
         # Keep record
         records.append(target.record)
 
@@ -360,6 +360,7 @@ def predict(
         "sampling_steps": sampling_steps,
         "diffusion_samples": diffusion_samples,
     }
+    print("checkpoint",checkpoint)
     model_module: Boltz1 = Boltz1.load_from_checkpoint(
         checkpoint,
         strict=True,
@@ -418,7 +419,7 @@ def predict(
     "--cache",
     type=click.Path(exists=False),
     help="The directory where to download the data and model. Default is ~/.boltz.",
-    default="~/.boltz",
+    default="/workspace/boltz",
 )
 @click.option(
     "--checkpoint",
@@ -458,7 +459,7 @@ def generate_embeddings(
     data: str,
     out_dir: str,
     out_hdf5: str,
-    cache: str = "~/.boltz",
+    cache: str = "/workspace/boltz",
     checkpoint: Optional[str] = None,
     accelerator: str = "cuda:0",
     recycling_steps: int = 3,
@@ -495,8 +496,10 @@ def generate_embeddings(
 
     # Set checkpoint
     if checkpoint is None:
+        print("cache",cache)
         checkpoint = cache / "boltz1.ckpt"
-
+    else:
+        print("Using manual checkpoint")
     # Check if data is a directory
     data = check_inputs(data, out_dir, override)
     processed = process_inputs(data, out_dir, ccd)
@@ -517,6 +520,7 @@ def generate_embeddings(
         "sampling_steps": -1,
         "diffusion_samples": -1,
     }
+    print("ch1",checkpoint)
     model_module: Boltz1 = Boltz1.load_from_checkpoint(
         checkpoint,
         strict=True,
@@ -540,7 +544,7 @@ def generate_embeddings(
         return batch
 
     with h5py.File(out_hdf5, "w") as h5f:
-        for batch in data_loader:
+        for i, batch in enumerate(data_loader):
             batch = move_batch_to_device(batch, accelerator)
             sinlge_emb, pair_emb = model_module.forward_embed(
                 batch, recycling_steps=recycling_steps
@@ -548,6 +552,7 @@ def generate_embeddings(
             if mean:
                 sinlge_emb = torch.mean(sinlge_emb, dim=-1)
                 pair_emb = torch.mean(pair_emb, dim=-1)
+            print("batch record",batch['record'][0].id)
             h5f.create_dataset(
                 f"{batch['record'][0].id}_data_single_emb", data=sinlge_emb.cpu()
             )

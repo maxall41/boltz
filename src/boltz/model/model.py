@@ -75,7 +75,7 @@ class Boltz1(LightningModule):
         predict_args: Optional[dict[str, Any]] = None,
     ) -> None:
         super().__init__()
-
+        confidence_prediction = False
         self.save_hyperparameters()
 
         self.lddt = nn.ModuleDict()
